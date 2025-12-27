@@ -1,170 +1,210 @@
 <template>
-  <section ref="wrapper" class="scroll-bg-wrapper" aria-hidden="true">
-    <img
-      class="scroll-bg-sticky scroll-bg-previous"
-      :class="{ 'is-visible': showPrevious }"
-      :src="previousSrc || currentSrc"
-      alt=""
-      role="presentation"
-      aria-hidden="true"
-      decoding="async"
-    />
-    <img
-      class="scroll-bg-sticky scroll-bg-current"
-      :src="currentSrc"
-      alt=""
-      role="presentation"
-      aria-hidden="true"
-      decoding="async"
-    />
+  <section ref="section" class="scroll-wrapper" aria-hidden="true">
+    <div class="pin">
+      <canvas ref="canvas"></canvas>
+    </div>
   </section>
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { onMounted, onBeforeUnmount, ref } from 'vue'
+
+const section = ref(null)
+const canvas = ref(null)
 
 const frameCount = 81
-const firstAnimatedFrame = 1
-const scrollSpeed = 1
-const smoothFactor = 0.06
-const wrapper = ref(null)
-const previousSrc = ref('')
-const showPrevious = ref(false)
+const frames = new Array(frameCount)
 
-const pad = (n) => String(n).padStart(3, '0')
-const frameSrc = (i) => encodeURI(`/bg/img (${i}).webp`)
-const currentSrc = ref(frameSrc(1))
-
-let images = []
+const targetProgress = { value: 0 }
+let currentProgress = 0
 let rafId = 0
-let latestScrollY = 0
-let targetFrame = firstAnimatedFrame
-let currentFrame = firstAnimatedFrame
-let animating = false
-
-const getScrollElement = () => document.scrollingElement || document.documentElement
-
-const preloadFrames = () => {
-  images = new Array(frameCount)
-  for (let i = 1; i <= frameCount; i += 1) {
-    const img = new Image()
-    img.src = frameSrc(i)
-    images[i - 1] = img
-  }
-}
+let resizeId = 0
+let lastFrameIndex = -1
+let isReady = false
+let cleanupBg = null
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+const frameSrc = (index) => encodeURI(`/bg/img (${index + 1}).webp`)
 
-const renderFrame = () => {
-  const scrollTop = latestScrollY
-  const scrollEl = getScrollElement()
-  const maxScroll = Math.max(1, scrollEl.scrollHeight - window.innerHeight)
-  const progress = clamp((scrollTop / maxScroll) * scrollSpeed, 0, 1)
-  const animatedRange = frameCount - firstAnimatedFrame
-
-  targetFrame = firstAnimatedFrame + progress * animatedRange
-
-  const delta = targetFrame - currentFrame
-  if (Math.abs(delta) < 0.01) {
-    currentFrame = targetFrame
-    animating = false
-  } else {
-    currentFrame += delta * smoothFactor
-  }
-
-  const nextFrame = clamp(Math.round(currentFrame), 1, frameCount)
-
-  const nextSrc = frameSrc(nextFrame)
-
-  if (currentSrc.value !== nextSrc) {
-    previousSrc.value = currentSrc.value
-    showPrevious.value = true
-    currentSrc.value = nextSrc
-    requestAnimationFrame(() => {
-      showPrevious.value = false
+const preloadImages = () => {
+  const loaders = Array.from({ length: frameCount }, (_, index) =>
+    new Promise((resolve) => {
+      const img = new Image()
+      img.decoding = 'async'
+      img.loading = 'eager'
+      img.src = frameSrc(index)
+      img.onload = () => resolve(img)
+      img.onerror = () => resolve(img)
     })
-  }
+  )
 
-  if (animating) {
-    rafId = window.requestAnimationFrame(renderFrame)
-  } else {
-    rafId = 0
+  return Promise.all(loaders).then((loaded) => {
+    loaded.forEach((img, index) => {
+      frames[index] = img
+    })
+    isReady = true
+  })
+}
+
+const clearStaticBackground = () => {
+  const doc = document.documentElement
+  const body = document.body
+  const prev = {
+    htmlBg: doc.style.backgroundImage,
+    bodyBg: body.style.backgroundImage,
+    varBg: doc.style.getPropertyValue('--scroll-bg-image'),
+  }
+  doc.style.setProperty('--scroll-bg-image', 'none')
+  doc.style.backgroundImage = 'none'
+  body.style.backgroundImage = 'none'
+  cleanupBg = () => {
+    doc.style.setProperty('--scroll-bg-image', prev.varBg)
+    doc.style.backgroundImage = prev.htmlBg
+    body.style.backgroundImage = prev.bodyBg
   }
 }
 
-const onScroll = () => {
-  const scrollEl = getScrollElement()
-  latestScrollY = scrollEl.scrollTop || window.scrollY || window.pageYOffset || 0
-  if (!animating) {
-    animating = true
-    rafId = window.requestAnimationFrame(renderFrame)
+const getScrollProgress = () => {
+  const el = section.value
+  if (!el) return 0
+
+  const scrollTop = window.scrollY || window.pageYOffset || 0
+  const sectionTop = el.offsetTop
+  const sectionHeight = el.offsetHeight
+  const maxScroll = Math.max(1, sectionHeight - window.innerHeight)
+  const progress = (scrollTop - sectionTop) / maxScroll
+
+  return clamp(progress, 0, 1)
+}
+
+const updateTarget = () => {
+  targetProgress.value = getScrollProgress()
+}
+
+const resizeCanvas = () => {
+  const el = canvas.value
+  if (!el) return
+
+  const dpr = window.devicePixelRatio || 1
+  const width = el.clientWidth || window.innerWidth
+  const height = el.clientHeight || window.innerHeight
+
+  const nextWidth = Math.floor(width * dpr)
+  const nextHeight = Math.floor(height * dpr)
+
+  if (el.width !== nextWidth || el.height !== nextHeight) {
+    el.width = nextWidth
+    el.height = nextHeight
+    el.style.width = `${width}px`
+    el.style.height = `${height}px`
+    lastFrameIndex = -1
   }
+}
+
+const drawFrame = (frameIndex) => {
+  if (!isReady) return
+  const el = canvas.value
+  if (!el) return
+
+  const ctx = el.getContext('2d')
+  if (!ctx) return
+
+  const img = frames[frameIndex]
+  if (!img) return
+
+  const canvasWidth = el.width
+  const canvasHeight = el.height
+
+  const imgWidth = img.naturalWidth || img.width
+  const imgHeight = img.naturalHeight || img.height
+  if (!imgWidth || !imgHeight) return
+
+  const scale = Math.max(canvasWidth / imgWidth, canvasHeight / imgHeight)
+  const drawWidth = imgWidth * scale
+  const drawHeight = imgHeight * scale
+  const offsetX = (canvasWidth - drawWidth) * 0.5
+  const offsetY = (canvasHeight - drawHeight) * 0.5
+
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+  ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight)
+}
+
+const tick = () => {
+  const delta = Math.abs(targetProgress.value - currentProgress)
+  const t = clamp((delta - 0.02) / 0.2, 0, 1)
+  const ease = 0.07 + (0.18 - 0.07) * t
+  currentProgress += (targetProgress.value - currentProgress) * ease
+  const frameIndex = Math.round(currentProgress * (frames.length - 1))
+
+  if (frameIndex !== lastFrameIndex) {
+    lastFrameIndex = frameIndex
+    drawFrame(frameIndex)
+  }
+
+  rafId = window.requestAnimationFrame(tick)
 }
 
 const onResize = () => {
-  onScroll()
-}
-
-const setRootBackground = (src) => {
-  if (typeof document === 'undefined') return
-  const value = `url('${src}')`
-  document.documentElement.style.setProperty('--scroll-bg-image', value)
-  document.body.style.backgroundImage = value
+  if (resizeId) window.cancelAnimationFrame(resizeId)
+  resizeId = window.requestAnimationFrame(() => {
+    resizeCanvas()
+    drawFrame(lastFrameIndex === -1 ? 0 : lastFrameIndex)
+    updateTarget()
+  })
 }
 
 onMounted(() => {
-  preloadFrames()
-  onScroll()
-  renderFrame()
-  setRootBackground(currentSrc.value)
-  window.addEventListener('scroll', onScroll, { passive: true })
+  if (typeof window === 'undefined') return
+
+  clearStaticBackground()
+  resizeCanvas()
+  updateTarget()
+
+  preloadImages().then(() => {
+    drawFrame(0)
+    tick()
+  })
+
+  window.addEventListener('scroll', updateTarget, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener('scroll', onScroll)
-  window.removeEventListener('resize', onResize)
-  if (rafId) window.cancelAnimationFrame(rafId)
-})
+  if (typeof window === 'undefined') return
 
-watch(currentSrc, (src) => {
-  setRootBackground(src)
+  window.removeEventListener('scroll', updateTarget)
+  window.removeEventListener('resize', onResize)
+
+  if (rafId) window.cancelAnimationFrame(rafId)
+  if (resizeId) window.cancelAnimationFrame(resizeId)
+  if (cleanupBg) cleanupBg()
 })
 </script>
 
 <style scoped>
-.scroll-bg-wrapper {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
+.scroll-wrapper {
+  position: relative;
+  height: 4500px;
+  width: 100%;
   z-index: 0;
   pointer-events: none;
 }
 
-.scroll-bg-sticky {
+.pin {
+  position: relative;
+  height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pin canvas {
   position: fixed;
   inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  object-fit: cover;
-  object-position: center;
+  width: 100%;
+  height: 100%;
+  display: block;
   pointer-events: none;
-  background: transparent;
-  transition: opacity 0.7s ease;
-  will-change: opacity;
-}
-
-.scroll-bg-previous {
-  opacity: 0;
-}
-
-.scroll-bg-previous.is-visible {
-  opacity: 1;
-}
-
-.scroll-bg-current {
-  opacity: 1;
+  z-index: 0;
 }
 </style>
