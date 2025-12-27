@@ -23,21 +23,24 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 
-const frameCount = 91
-const firstAnimatedFrame = 2
-const scrollSpeed = 1.6
+const frameCount = 81
+const firstAnimatedFrame = 1
+const scrollSpeed = 1
+const smoothFactor = 0.06
 const wrapper = ref(null)
-const currentSrc = ref('/bg/ezgif-frame-001.png')
 const previousSrc = ref('')
 const showPrevious = ref(false)
 
 const pad = (n) => String(n).padStart(3, '0')
-const frameSrc = (i) => `/bg/ezgif-frame-${pad(i)}.png`
+const frameSrc = (i) => encodeURI(`/bg/img (${i}).webp`)
+const currentSrc = ref(frameSrc(1))
 
 let images = []
 let rafId = 0
-let ticking = false
 let latestScrollY = 0
+let targetFrame = firstAnimatedFrame
+let currentFrame = firstAnimatedFrame
+let animating = false
 
 const getScrollElement = () => document.scrollingElement || document.documentElement
 
@@ -50,22 +53,26 @@ const preloadFrames = () => {
   }
 }
 
-const updateFrame = () => {
-  ticking = false
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+
+const renderFrame = () => {
   const scrollTop = latestScrollY
   const scrollEl = getScrollElement()
   const maxScroll = Math.max(1, scrollEl.scrollHeight - window.innerHeight)
-  const progress = Math.min(1, Math.max(0, (scrollTop / maxScroll) * scrollSpeed))
-  let nextFrame = 1
+  const progress = clamp((scrollTop / maxScroll) * scrollSpeed, 0, 1)
+  const animatedRange = frameCount - firstAnimatedFrame
 
-  if (progress > 0) {
-    const animatedRange = frameCount - firstAnimatedFrame
-    const animatedIndex = Math.min(
-      animatedRange,
-      Math.floor(progress * (animatedRange + 1))
-    )
-    nextFrame = Math.min(frameCount, firstAnimatedFrame + animatedIndex)
+  targetFrame = firstAnimatedFrame + progress * animatedRange
+
+  const delta = targetFrame - currentFrame
+  if (Math.abs(delta) < 0.01) {
+    currentFrame = targetFrame
+    animating = false
+  } else {
+    currentFrame += delta * smoothFactor
   }
+
+  const nextFrame = clamp(Math.round(currentFrame), 1, frameCount)
 
   const nextSrc = frameSrc(nextFrame)
 
@@ -77,14 +84,20 @@ const updateFrame = () => {
       showPrevious.value = false
     })
   }
+
+  if (animating) {
+    rafId = window.requestAnimationFrame(renderFrame)
+  } else {
+    rafId = 0
+  }
 }
 
 const onScroll = () => {
   const scrollEl = getScrollElement()
   latestScrollY = scrollEl.scrollTop || window.scrollY || window.pageYOffset || 0
-  if (!ticking) {
-    ticking = true
-    rafId = window.requestAnimationFrame(updateFrame)
+  if (!animating) {
+    animating = true
+    rafId = window.requestAnimationFrame(renderFrame)
   }
 }
 
@@ -102,7 +115,7 @@ const setRootBackground = (src) => {
 onMounted(() => {
   preloadFrames()
   onScroll()
-  updateFrame()
+  renderFrame()
   setRootBackground(currentSrc.value)
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
@@ -137,7 +150,7 @@ watch(currentSrc, (src) => {
   object-position: center;
   pointer-events: none;
   background: transparent;
-  transition: opacity 0.45s ease;
+  transition: opacity 0.7s ease;
   will-change: opacity;
 }
 

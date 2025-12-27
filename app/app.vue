@@ -23,7 +23,7 @@ onMounted(() => {
 
 :root {
   --bg: transparent;
-  --scroll-bg-image: url('/bg/ezgif-frame-001.png');
+  --scroll-bg-image: url('/bg/img%20(1).webp');
   --surface: rgba(255, 255, 255, 0.62);
   --surface-strong: rgba(255, 255, 255, 0.72);
   --surface-soft: rgba(255, 255, 255, 0.52);
