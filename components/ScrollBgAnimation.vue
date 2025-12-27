@@ -134,10 +134,12 @@ watch(currentSrc, (src) => {
 
 <style scoped>
 .scroll-bg-wrapper {
-  position: relative;
+  position: fixed;
+  inset: 0;
   width: 100vw;
-  height: 500vh;
+  height: 100vh;
   z-index: 0;
+  pointer-events: none;
 }
 
 .scroll-bg-sticky {

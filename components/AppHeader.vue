@@ -1,7 +1,7 @@
 <template>
   <header class="header">
     <nav class="nav">
-      <NuxtLink to="/" class="logo">IKB Bureau</NuxtLink>
+      <NuxtLink to="/" class="logo">IKB БЮРО</NuxtLink>
 
       <div class="links">
         <a href="#values">Ценности</a>
