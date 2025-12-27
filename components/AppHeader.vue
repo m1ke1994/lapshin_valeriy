@@ -4,13 +4,15 @@
       <NuxtLink to="/" class="logo">IKB Bureau</NuxtLink>
 
       <div class="links">
-        <a href="#about">О бюро</a>
-        <a href="#services">Компетенции</a>
-        <a href="#projects">Кейсы</a>
+        <a href="#values">Ценности</a>
+        <a href="#approach">Подход</a>
+        <a href="#competencies">Компетенции</a>
+        <a href="#trust">Доверие</a>
+        <a href="#projects">Проекты</a>
         <a href="#contacts">Контакты</a>
       </div>
 
-      <a href="#contacts" class="header-cta">Запросить смету</a>
+      <a href="#contacts" class="header-cta">Запросить консультацию</a>
     </nav>
   </header>
 </template>
@@ -23,8 +25,8 @@
   width: 100%;
   z-index: 50;
   backdrop-filter: blur(18px);
-  background: rgba(6, 8, 12, 0.35);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  border-bottom: 1px solid rgba(27, 31, 40, 0.12);
 }
 
 .nav {
@@ -53,7 +55,7 @@
   font-size: 11px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.75;
+  opacity: 0.7;
   transition: opacity 0.2s ease, color 0.2s ease;
 }
 
@@ -65,20 +67,21 @@
 .header-cta {
   padding: 10px 16px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(32, 68, 93, 0.25);
   text-decoration: none;
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text);
-  background: rgba(210, 166, 109, 0.15);
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  background: rgba(255, 255, 255, 0.7);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 12px 30px rgba(27, 31, 40, 0.12);
 }
 
 .header-cta:hover {
-  border-color: rgba(210, 166, 109, 0.7);
+  border-color: rgba(32, 68, 93, 0.55);
   color: var(--accent-strong);
-  background: rgba(210, 166, 109, 0.25);
+  background: rgba(255, 255, 255, 0.88);
 }
 
 @media (max-width: 900px) {

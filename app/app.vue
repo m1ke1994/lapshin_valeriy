@@ -6,23 +6,32 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'
+import AppHeader from '../components/AppHeader.vue'
 
+onMounted(() => {
+  if (typeof window === 'undefined') return
+  if ('scrollRestoration' in window.history) {
+    window.history.scrollRestoration = 'manual'
+  }
+  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+})
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap');
 
 :root {
   --bg: transparent;
   --scroll-bg-image: url('/bg/ezgif-frame-001.png');
-  --surface: rgba(12, 14, 18, 0.45);
-  --surface-strong: rgba(12, 14, 18, 0.6);
-  --surface-soft: rgba(18, 22, 28, 0.38);
-  --text: #f7f7f8;
-  --muted: rgba(246, 246, 248, 0.72);
-  --accent: #d2a66d;
-  --accent-strong: #f1c17d;
-  --accent-cool: #7dd8f1;
+  --surface: rgba(255, 255, 255, 0.62);
+  --surface-strong: rgba(255, 255, 255, 0.72);
+  --surface-soft: rgba(255, 255, 255, 0.52);
+  --text: #1b1f28;
+  --muted: #4b5462;
+  --accent: #2f5b7c;
+  --accent-strong: #20445d;
+  --accent-warm: #9a7b58;
 }
 
 * {
@@ -48,7 +57,7 @@ body,
 
 body {
   margin: 0;
-  font-family: "Sora", "Manrope", sans-serif;
+  font-family: "Manrope", "Segoe UI", sans-serif;
   background: transparent;
   background-image: var(--scroll-bg-image);
   background-size: cover;

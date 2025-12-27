@@ -1,7 +1,16 @@
 <template>
   <section ref="wrapper" class="scroll-bg-wrapper" aria-hidden="true">
     <img
-      class="scroll-bg-sticky"
+      class="scroll-bg-sticky scroll-bg-previous"
+      :class="{ 'is-visible': showPrevious }"
+      :src="previousSrc || currentSrc"
+      alt=""
+      role="presentation"
+      aria-hidden="true"
+      decoding="async"
+    />
+    <img
+      class="scroll-bg-sticky scroll-bg-current"
       :src="currentSrc"
       alt=""
       role="presentation"
@@ -16,8 +25,11 @@ import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 
 const frameCount = 91
 const firstAnimatedFrame = 2
+const scrollSpeed = 1.6
 const wrapper = ref(null)
 const currentSrc = ref('/bg/ezgif-frame-001.png')
+const previousSrc = ref('')
+const showPrevious = ref(false)
 
 const pad = (n) => String(n).padStart(3, '0')
 const frameSrc = (i) => `/bg/ezgif-frame-${pad(i)}.png`
@@ -26,6 +38,8 @@ let images = []
 let rafId = 0
 let ticking = false
 let latestScrollY = 0
+
+const getScrollElement = () => document.scrollingElement || document.documentElement
 
 const preloadFrames = () => {
   images = new Array(frameCount)
@@ -38,15 +52,10 @@ const preloadFrames = () => {
 
 const updateFrame = () => {
   ticking = false
-  if (!wrapper.value) return
-
-  const rect = wrapper.value.getBoundingClientRect()
   const scrollTop = latestScrollY
-  const wrapperTop = scrollTop + rect.top
-  const wrapperHeight = rect.height
-  const viewportHeight = window.innerHeight
-  const maxScroll = Math.max(1, wrapperHeight - viewportHeight)
-  const progress = Math.min(1, Math.max(0, (scrollTop - wrapperTop) / maxScroll))
+  const scrollEl = getScrollElement()
+  const maxScroll = Math.max(1, scrollEl.scrollHeight - window.innerHeight)
+  const progress = Math.min(1, Math.max(0, (scrollTop / maxScroll) * scrollSpeed))
   let nextFrame = 1
 
   if (progress > 0) {
@@ -61,12 +70,18 @@ const updateFrame = () => {
   const nextSrc = frameSrc(nextFrame)
 
   if (currentSrc.value !== nextSrc) {
+    previousSrc.value = currentSrc.value
+    showPrevious.value = true
     currentSrc.value = nextSrc
+    requestAnimationFrame(() => {
+      showPrevious.value = false
+    })
   }
 }
 
 const onScroll = () => {
-  latestScrollY = window.scrollY || window.pageYOffset
+  const scrollEl = getScrollElement()
+  latestScrollY = scrollEl.scrollTop || window.scrollY || window.pageYOffset || 0
   if (!ticking) {
     ticking = true
     rafId = window.requestAnimationFrame(updateFrame)
@@ -86,7 +101,7 @@ const setRootBackground = (src) => {
 
 onMounted(() => {
   preloadFrames()
-  latestScrollY = window.scrollY || window.pageYOffset
+  onScroll()
   updateFrame()
   setRootBackground(currentSrc.value)
   window.addEventListener('scroll', onScroll, { passive: true })
@@ -122,5 +137,19 @@ watch(currentSrc, (src) => {
   object-position: center;
   pointer-events: none;
   background: transparent;
+  transition: opacity 0.45s ease;
+  will-change: opacity;
+}
+
+.scroll-bg-previous {
+  opacity: 0;
+}
+
+.scroll-bg-previous.is-visible {
+  opacity: 1;
+}
+
+.scroll-bg-current {
+  opacity: 1;
 }
 </style>
