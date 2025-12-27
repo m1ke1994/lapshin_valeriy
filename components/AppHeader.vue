@@ -1,14 +1,16 @@
 <template>
   <header class="header">
     <nav class="nav">
-      <NuxtLink to="/" class="logo">IKB</NuxtLink>
+      <NuxtLink to="/" class="logo">IKB Bureau</NuxtLink>
 
       <div class="links">
-        <a href="#about">About</a>
-        <a href="#services">Services</a>
-        <a href="#projects">Projects</a>
-        <a href="#contacts">Contacts</a>
+        <a href="#about">О бюро</a>
+        <a href="#services">Компетенции</a>
+        <a href="#projects">Кейсы</a>
+        <a href="#contacts">Контакты</a>
       </div>
+
+      <a href="#contacts" class="header-cta">Запросить смету</a>
     </nav>
   </header>
 </template>
@@ -20,8 +22,8 @@
   left: 0;
   width: 100%;
   z-index: 50;
-  backdrop-filter: blur(14px);
-  background: rgba(9, 10, 12, 0.55);
+  backdrop-filter: blur(18px);
+  background: rgba(6, 8, 12, 0.62);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -32,14 +34,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
 }
 
 .logo {
   font-weight: 600;
-  font-size: 18px;
+  font-size: 16px;
   text-decoration: none;
   color: var(--text);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.32em;
   text-transform: uppercase;
 }
 
@@ -48,7 +51,7 @@
   text-decoration: none;
   color: var(--text);
   font-size: 11px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.24em;
   text-transform: uppercase;
   opacity: 0.75;
   transition: opacity 0.2s ease, color 0.2s ease;
@@ -57,5 +60,34 @@
 .links a:hover {
   opacity: 1;
   color: var(--accent);
+}
+
+.header-cta {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  text-decoration: none;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: rgba(210, 166, 109, 0.15);
+  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.header-cta:hover {
+  border-color: rgba(210, 166, 109, 0.7);
+  color: var(--accent-strong);
+  background: rgba(210, 166, 109, 0.25);
+}
+
+@media (max-width: 900px) {
+  .links {
+    display: none;
+  }
+
+  .nav {
+    justify-content: space-between;
+  }
 }
 </style>

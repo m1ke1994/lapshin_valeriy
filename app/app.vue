@@ -10,16 +10,18 @@
 </script>
 
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #0b0b0c;
-  --surface: #121316;
-  --surface-2: #1a1c20;
-  --text: #f6f6f8;
+  --bg: #07080b;
+  --surface: rgba(16, 18, 23, 0.72);
+  --surface-strong: rgba(16, 18, 23, 0.92);
+  --surface-soft: rgba(24, 28, 36, 0.62);
+  --text: #f7f7f8;
   --muted: rgba(246, 246, 248, 0.72);
-  --accent: #41f0c0;
-  --accent-warm: #f2b86d;
+  --accent: #d2a66d;
+  --accent-strong: #f1c17d;
+  --accent-cool: #7dd8f1;
 }
 
 * {
@@ -30,13 +32,17 @@ html {
   scroll-behavior: smooth;
 }
 
+html,
+body,
+#__nuxt,
+.app-root {
+  background: transparent;
+}
+
 body {
   margin: 0;
-  font-family: "Space Grotesk", "Satoshi", "Neue Montreal", sans-serif;
-  background:
-    radial-gradient(1200px 800px at 20% -10%, rgba(65, 240, 192, 0.12), transparent 60%),
-    radial-gradient(900px 600px at 80% -20%, rgba(242, 184, 109, 0.15), transparent 55%),
-    var(--bg);
+  font-family: "Sora", "Manrope", sans-serif;
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -46,7 +52,6 @@ a {
 
 .app-root {
   min-height: 100vh;
-  background: transparent;
   color: var(--text);
 }
 </style>

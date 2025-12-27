@@ -1,6 +1,7 @@
 <template>
   <section ref="wrapper" class="scroll-bg-wrapper">
     <div class="scroll-bg-sticky" :style="{ backgroundImage: `url('${currentSrc}')` }" />
+    <div class="scroll-bg-overlay" />
   </section>
 </template>
 
@@ -89,13 +90,13 @@ onBeforeUnmount(() => {
 .scroll-bg-wrapper {
   position: relative;
   width: 100vw;
-  height: 220vh;
+  height: 500vh;
   z-index: 0;
 }
 
 .scroll-bg-sticky {
-  position: sticky;
-  top: 0;
+  position: fixed;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   z-index: 0;
@@ -103,13 +104,20 @@ onBeforeUnmount(() => {
   background-position: center;
   background-repeat: no-repeat;
   will-change: background-image;
+  pointer-events: none;
 }
 
-.scroll-bg-sticky::after {
-  content: "";
-  position: absolute;
+.scroll-bg-overlay {
+  position: fixed;
   inset: 0;
-  background: radial-gradient(120% 120% at 50% 0%, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.35));
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
   pointer-events: none;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(8, 10, 16, 0.1), transparent 45%),
+    radial-gradient(circle at 85% 30%, rgba(9, 12, 18, 0.2), transparent 50%),
+    linear-gradient(120deg, rgba(7, 8, 11, 0.85), rgba(7, 8, 11, 0.35));
+  mix-blend-mode: multiply;
 }
 </style>
