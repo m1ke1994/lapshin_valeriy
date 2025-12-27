@@ -1,12 +1,18 @@
 <template>
-  <section ref="wrapper" class="scroll-bg-wrapper">
-    <div class="scroll-bg-sticky" :style="{ backgroundImage: `url('${currentSrc}')` }" />
-    <div class="scroll-bg-overlay" />
+  <section ref="wrapper" class="scroll-bg-wrapper" aria-hidden="true">
+    <img
+      class="scroll-bg-sticky"
+      :src="currentSrc"
+      alt=""
+      role="presentation"
+      aria-hidden="true"
+      decoding="async"
+    />
   </section>
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 
 const frameCount = 91
 const firstAnimatedFrame = 2
@@ -71,10 +77,18 @@ const onResize = () => {
   onScroll()
 }
 
+const setRootBackground = (src) => {
+  if (typeof document === 'undefined') return
+  const value = `url('${src}')`
+  document.documentElement.style.setProperty('--scroll-bg-image', value)
+  document.body.style.backgroundImage = value
+}
+
 onMounted(() => {
   preloadFrames()
   latestScrollY = window.scrollY || window.pageYOffset
   updateFrame()
+  setRootBackground(currentSrc.value)
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
 })
@@ -83,6 +97,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onResize)
   if (rafId) window.cancelAnimationFrame(rafId)
+})
+
+watch(currentSrc, (src) => {
+  setRootBackground(src)
 })
 </script>
 
@@ -100,24 +118,9 @@ onBeforeUnmount(() => {
   width: 100vw;
   height: 100vh;
   z-index: 0;
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  will-change: background-image;
+  object-fit: cover;
+  object-position: center;
   pointer-events: none;
-}
-
-.scroll-bg-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 15% 20%, rgba(8, 10, 16, 0.1), transparent 45%),
-    radial-gradient(circle at 85% 30%, rgba(9, 12, 18, 0.2), transparent 50%),
-    linear-gradient(120deg, rgba(7, 8, 11, 0.85), rgba(7, 8, 11, 0.35));
-  mix-blend-mode: multiply;
+  background: transparent;
 }
 </style>

@@ -13,10 +13,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Unbounded:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #07080b;
-  --surface: rgba(16, 18, 23, 0.72);
-  --surface-strong: rgba(16, 18, 23, 0.92);
-  --surface-soft: rgba(24, 28, 36, 0.62);
+  --bg: transparent;
+  --scroll-bg-image: url('/bg/ezgif-frame-001.png');
+  --surface: rgba(12, 14, 18, 0.45);
+  --surface-strong: rgba(12, 14, 18, 0.6);
+  --surface-soft: rgba(18, 22, 28, 0.38);
   --text: #f7f7f8;
   --muted: rgba(246, 246, 248, 0.72);
   --accent: #d2a66d;
@@ -30,6 +31,12 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: transparent;
+  background-image: var(--scroll-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 html,
@@ -42,7 +49,12 @@ body,
 body {
   margin: 0;
   font-family: "Sora", "Manrope", sans-serif;
-  background: var(--bg);
+  background: transparent;
+  background-image: var(--scroll-bg-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--text);
 }
 

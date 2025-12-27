@@ -259,18 +259,6 @@
   overflow: hidden;
 }
 
-.page::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 15% 80%, rgba(210, 166, 109, 0.2), transparent 55%),
-    radial-gradient(circle at 80% 20%, rgba(125, 216, 241, 0.2), transparent 40%);
-  mix-blend-mode: screen;
-}
-
 .section,
 .hero {
   position: relative;
@@ -305,6 +293,7 @@
   font-size: clamp(40px, 5vw, 72px);
   line-height: 1.05;
   margin: 0;
+  text-shadow: 0 10px 30px rgba(7, 8, 11, 0.3);
 }
 
 .eyebrow {
@@ -320,6 +309,7 @@ h2 {
   font-size: clamp(30px, 4vw, 52px);
   line-height: 1.1;
   margin: 0 0 20px;
+  text-shadow: 0 8px 24px rgba(7, 8, 11, 0.25);
 }
 
 h3 {
@@ -333,6 +323,7 @@ h3 {
   margin: 0;
   max-width: 720px;
   color: var(--muted);
+  text-shadow: 0 6px 18px rgba(7, 8, 11, 0.2);
 }
 
 .hero-actions {
