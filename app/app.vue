@@ -9,7 +9,7 @@
 import { nextTick, onBeforeUnmount, onMounted } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 
-const REVEAL_SCROLL_START = 0
+const REVEAL_SCROLL_START = 60
 let revealObserver
 let revealTargets = []
 let revealStarted = false

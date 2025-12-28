@@ -238,14 +238,50 @@ h3 {
 }
 
 .reveal-ready .reveal {
-  opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
+  opacity: 1;
 }
 
-.reveal-ready .reveal.is-visible {
+.reveal-ready .reveal .section-head,
+.reveal-ready .reveal .hero-copy h1,
+.reveal-ready .reveal .hero-copy .eyebrow {
+  opacity: 0;
+  transform: translateX(-36px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.reveal-ready .reveal .lead,
+.reveal-ready .reveal .cards-grid,
+.reveal-ready .reveal .steps-grid,
+.reveal-ready .reveal .cert-grid,
+.reveal-ready .reveal .hero-aside,
+.reveal-ready .reveal .hero-metrics,
+.reveal-ready .reveal .hero-actions,
+.reveal-ready .reveal .contact-grid {
+  opacity: 0;
+  transform: translateX(32px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.reveal-ready .reveal .glass-card {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.reveal-ready .reveal.is-visible .section-head,
+.reveal-ready .reveal.is-visible .hero-copy h1,
+.reveal-ready .reveal.is-visible .hero-copy .eyebrow,
+.reveal-ready .reveal.is-visible .lead,
+.reveal-ready .reveal.is-visible .cards-grid,
+.reveal-ready .reveal.is-visible .steps-grid,
+.reveal-ready .reveal.is-visible .cert-grid,
+.reveal-ready .reveal.is-visible .hero-aside,
+.reveal-ready .reveal.is-visible .hero-metrics,
+.reveal-ready .reveal.is-visible .hero-actions,
+.reveal-ready .reveal.is-visible .contact-grid,
+.reveal-ready .reveal.is-visible .glass-card {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
