@@ -1,21 +1,65 @@
 <template>
   <header class="header">
     <nav class="nav">
-      <NuxtLink to="/" class="logo">IKB — Инженерное бюро</NuxtLink>
+      <NuxtLink to="/" class="logo" @click.prevent="scrollToHash('#top')">IKB — Инженерное бюро</NuxtLink>
 
       <div class="links">
-        <a href="#values">Философия</a>
-        <a href="#approach">Методика</a>
-        <a href="#competencies">Направления</a>
-        <a href="#trust">Доверие</a>
-        <a href="#projects">Проекты</a>
-        <a href="#contacts">Контакты</a>
+        <a
+          v-for="item in navItems"
+          :key="item.href"
+          :href="item.href"
+          @click.prevent="scrollToHash(item.href)"
+        >
+          {{ item.label }}
+        </a>
       </div>
 
-      <a href="#contacts" class="header-cta">Запланировать разговор</a>
+      <a href="#contacts" class="header-cta" @click.prevent="scrollToHash('#contacts')">Запланировать разговор</a>
     </nav>
   </header>
 </template>
+
+<script setup>
+const navItems = [
+  { label: 'Философия', href: '#values' },
+  { label: 'Методика', href: '#approach' },
+  { label: 'Направления', href: '#competencies' },
+  { label: 'Доверие', href: '#trust' },
+  { label: 'Проекты', href: '#projects' },
+  { label: 'Контакты', href: '#contacts' },
+]
+
+const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3)
+
+const scrollToHash = (hash) => {
+  if (typeof window === 'undefined') return
+  const target = document.querySelector(hash)
+  const headerEl = document.querySelector('.header')
+  const offset = (headerEl?.offsetHeight || 80) + 10
+
+  const start = window.scrollY || window.pageYOffset || 0
+  const end = target
+    ? target.getBoundingClientRect().top + start - offset
+    : 0
+
+  const duration = 900
+  const startTs = performance.now()
+
+  const step = (ts) => {
+    const progress = Math.min(1, (ts - startTs) / duration)
+    const eased = easeOutCubic(progress)
+    const next = start + (end - start) * eased
+    window.scrollTo(0, next)
+    if (progress < 1) {
+      requestAnimationFrame(step)
+    } else if (hash) {
+      window.location.hash = hash
+    }
+  }
+
+  requestAnimationFrame(step)
+}
+</script>
 
 <style scoped>
 .header {
