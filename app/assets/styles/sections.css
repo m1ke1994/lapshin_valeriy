@@ -31,6 +31,17 @@
   gap: 42px;
 }
 
+.hero-animate {
+  opacity: 0;
+  transform: translateX(-46px);
+  transition: opacity 0.85s ease, transform 0.85s ease;
+}
+
+.hero-animate.is-visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .hero-copy {
   display: flex;
   flex-direction: column;
@@ -289,6 +300,12 @@ h3 {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .hero-animate {
+    transition: none;
+    transform: none;
+    opacity: 1;
   }
 }
 

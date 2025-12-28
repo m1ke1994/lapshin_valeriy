@@ -1,6 +1,6 @@
 <template>
   <section class="hero" id="top">
-    <div class="section-inner hero-inner reveal">
+    <div :class="['section-inner hero-inner reveal hero-animate', { 'is-visible': isHeroVisible }]">
       <div class="hero-copy glass-card">
         <p class="eyebrow">ИКБ · контрактная разработка и ОКР</p>
 
@@ -55,3 +55,18 @@
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue';
+
+const isHeroVisible = ref(false);
+
+onMounted(() => {
+  // Double RAF to ensure the hidden state paints before toggling visibility.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      isHeroVisible.value = true;
+    });
+  });
+});
+</script>
