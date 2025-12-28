@@ -58,10 +58,10 @@ onBeforeUnmount(() => {
 
 :root {
   --bg: transparent;
-  --scroll-bg-image: url('/bg/img%20(1).webp');
-  --surface: rgba(255, 255, 255, 0.62);
-  --surface-strong: rgba(255, 255, 255, 0.72);
-  --surface-soft: rgba(255, 255, 255, 0.52);
+  --scroll-bg-image: none;
+  --surface: rgba(255, 255, 255, 1);
+  --surface-strong: rgba(255, 255, 255, 0.9);
+  --surface-soft: rgba(255, 255, 255, 0.24);
   --text: #1b1f28;
   --muted: #4b5462;
   --accent: #2f5b7c;
@@ -76,11 +76,6 @@ onBeforeUnmount(() => {
 html {
   scroll-behavior: smooth;
   background-color: transparent;
-  background-image: var(--scroll-bg-image);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
 }
 
 html,
@@ -99,11 +94,6 @@ body {
   margin: 0;
   font-family: "Manrope", "Segoe UI", sans-serif;
   background: transparent;
-  background-image: var(--scroll-bg-image);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-attachment: fixed;
   color: var(--text);
 }
 
@@ -114,5 +104,7 @@ a {
 .app-root {
   min-height: 100vh;
   color: var(--text);
+  position: relative;
+  z-index: 1;
 }
 </style>

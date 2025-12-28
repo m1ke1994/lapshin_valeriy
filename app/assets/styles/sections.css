@@ -24,8 +24,8 @@
   width: min(1220px, 92vw);
   transform: translateX(-50%);
   border-radius: 28px;
-  background: rgba(255, 255, 255, 0.58);
-  border: 1px solid rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow: 0 30px 70px rgba(17, 21, 29, 0.14);
   backdrop-filter: blur(18px);
   z-index: 1;
