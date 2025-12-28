@@ -45,3 +45,16 @@
     </div>
   </section>
 </template>
+
+<style scoped>
+.hero {
+  padding-top: 220px;
+  scroll-margin-top: 110px;
+}
+
+@media (max-width: 980px) {
+  .hero {
+    padding-top: 180px;
+  }
+}
+</style>

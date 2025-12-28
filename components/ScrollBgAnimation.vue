@@ -23,33 +23,37 @@
 <script setup>
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 
-const frameCount = 81
-const firstAnimatedFrame = 1
+const totalAvailableFrames = 1546
+const framesToUse = 81
+const frameStep = Math.max(1, Math.floor(totalAvailableFrames / framesToUse))
+const frames = Array.from({ length: framesToUse }, (_, idx) => {
+  const frameIndex = Math.min(totalAvailableFrames, 1 + idx * frameStep)
+  return `/bg/frame_${String(frameIndex).padStart(5, '0')}.jpg`
+})
+
+const frameCount = frames.length
 const scrollSpeed = 1
 const smoothFactor = 0.06
 const wrapper = ref(null)
 const previousSrc = ref('')
 const showPrevious = ref(false)
-
-const pad = (n) => String(n).padStart(3, '0')
-const frameSrc = (i) => encodeURI(`/bg/img (${i}).webp`)
-const currentSrc = ref(frameSrc(1))
+const currentSrc = ref(frames[0])
 
 let images = []
 let rafId = 0
 let latestScrollY = 0
-let targetFrame = firstAnimatedFrame
-let currentFrame = firstAnimatedFrame
+let targetFrame = 0
+let currentFrame = 0
 let animating = false
 
 const getScrollElement = () => document.scrollingElement || document.documentElement
 
 const preloadFrames = () => {
   images = new Array(frameCount)
-  for (let i = 1; i <= frameCount; i += 1) {
+  for (let i = 0; i < frameCount; i += 1) {
     const img = new Image()
-    img.src = frameSrc(i)
-    images[i - 1] = img
+    img.src = frames[i]
+    images[i] = img
   }
 }
 
@@ -60,9 +64,9 @@ const renderFrame = () => {
   const scrollEl = getScrollElement()
   const maxScroll = Math.max(1, scrollEl.scrollHeight - window.innerHeight)
   const progress = clamp((scrollTop / maxScroll) * scrollSpeed, 0, 1)
-  const animatedRange = frameCount - firstAnimatedFrame
+  const animatedRange = Math.max(1, frameCount - 1)
 
-  targetFrame = firstAnimatedFrame + progress * animatedRange
+  targetFrame = progress * animatedRange
 
   const delta = targetFrame - currentFrame
   if (Math.abs(delta) < 0.01) {
@@ -72,9 +76,9 @@ const renderFrame = () => {
     currentFrame += delta * smoothFactor
   }
 
-  const nextFrame = clamp(Math.round(currentFrame), 1, frameCount)
+  const nextIndex = clamp(Math.round(currentFrame), 0, frameCount - 1)
 
-  const nextSrc = frameSrc(nextFrame)
+  const nextSrc = frames[nextIndex]
 
   if (currentSrc.value !== nextSrc) {
     previousSrc.value = currentSrc.value
