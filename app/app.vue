@@ -89,14 +89,14 @@ onBeforeUnmount(() => {
 :root {
   --bg: transparent;
   --scroll-bg-image: none;
-  --surface: rgba(255, 255, 255, 1);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --surface-soft: rgba(255, 255, 255, 0.24);
-  --text: #1b1f28;
-  --muted: #4b5462;
-  --accent: #2f5b7c;
-  --accent-strong: #20445d;
-  --accent-warm: #9a7b58;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface-soft: rgba(255, 255, 255, 0.18);
+  --text: #0f121a;
+  --muted: #3d4554;
+  --accent: #c79c3c;
+  --accent-strong: #b9871f;
+  --accent-warm: #e2c07a;
 }
 
 * {

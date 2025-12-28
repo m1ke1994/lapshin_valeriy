@@ -1,18 +1,18 @@
 <template>
   <header class="header">
     <nav class="nav">
-      <NuxtLink to="/" class="logo">IKB БЮРО</NuxtLink>
+      <NuxtLink to="/" class="logo">IKB — Инженерное бюро</NuxtLink>
 
       <div class="links">
-        <a href="#values">Ценности</a>
-        <a href="#approach">Подход</a>
-        <a href="#competencies">Компетенции</a>
+        <a href="#values">Философия</a>
+        <a href="#approach">Методика</a>
+        <a href="#competencies">Направления</a>
         <a href="#trust">Доверие</a>
         <a href="#projects">Проекты</a>
         <a href="#contacts">Контакты</a>
       </div>
 
-      <a href="#contacts" class="header-cta">Запросить консультацию</a>
+      <a href="#contacts" class="header-cta">Запланировать разговор</a>
     </nav>
   </header>
 </template>
@@ -25,7 +25,7 @@
   width: 100%;
   z-index: 50;
   backdrop-filter: blur(18px);
-  background: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.64);
   border-bottom: 1px solid rgba(27, 31, 40, 0.12);
 }
 
@@ -40,11 +40,11 @@
 }
 
 .logo {
-  font-weight: 600;
+  font-weight: 700;
   font-size: 16px;
   text-decoration: none;
   color: var(--text);
-  letter-spacing: 0.32em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
 }
 
@@ -55,7 +55,7 @@
   font-size: 11px;
   letter-spacing: 0.24em;
   text-transform: uppercase;
-  opacity: 0.7;
+  opacity: 0.72;
   transition: opacity 0.2s ease, color 0.2s ease;
 }
 
@@ -67,21 +67,22 @@
 .header-cta {
   padding: 10px 16px;
   border-radius: 999px;
-  border: 1px solid rgba(32, 68, 93, 0.25);
+  border: 1px solid rgba(200, 155, 60, 0.35);
   text-decoration: none;
   font-size: 11px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.82);
   transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 12px 30px rgba(27, 31, 40, 0.12);
+  box-shadow: 0 12px 30px rgba(27, 31, 40, 0.16);
 }
 
 .header-cta:hover {
-  border-color: rgba(32, 68, 93, 0.55);
+  border-color: rgba(184, 132, 26, 0.65);
   color: var(--accent-strong);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 18px 42px rgba(27, 31, 40, 0.2);
 }
 
 @media (max-width: 900px) {

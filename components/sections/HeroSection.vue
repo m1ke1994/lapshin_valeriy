@@ -2,43 +2,46 @@
   <section class="hero" id="top">
     <div class="section-inner hero-inner reveal">
       <div class="hero-copy glass-card">
-        <p class="eyebrow">Инженерно-конструкторское бюро</p>
-        <h1>Проектируем сложные изделия и выводим их в производство.</h1>
+        <p class="eyebrow">Инновационное конструкторское бюро</p>
+        <h1>Создаём продукты, которые доходят до рынка.</h1>
         <p class="lead">
-          Работаем как инженерный партнер для B2B: от идеи и НИОКР до серийных партий
-          и поддержки на запуске. Вникаем глубоко, чтобы продукт был готов к рынку.
+          Работаем как единая инженерная команда для B2B. От стратегической сессии до предсерийных образцов:
+          сложная механика, электроника, прошивки, испытания. NDA подписываем на старте и держим проект под полным
+          контролем.
         </p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="#contacts">Запросить бриф</a>
-          <a class="btn btn-ghost" href="#projects">Смотреть кейсы</a>
+          <a class="btn btn-primary" href="#contacts">Запланировать встречу</a>
+          <a class="btn btn-ghost" href="#projects">Посмотреть проекты</a>
         </div>
         <div class="hero-metrics">
           <div class="metric">
-            <span class="metric-value">15+ лет</span>
-            <span class="metric-label">инженерной практики</span>
+            <span class="metric-value">18+ лет</span>
+            <span class="metric-label">инженерной практики команды</span>
           </div>
           <div class="metric">
-            <span class="metric-value">80+ проектов</span>
-            <span class="metric-label">в промышленности и медицине</span>
+            <span class="metric-value">100+ изделий</span>
+            <span class="metric-label">запущены в производство</span>
           </div>
           <div class="metric">
             <span class="metric-value">NDA</span>
-            <span class="metric-label">конфиденциальность по умолчанию</span>
+            <span class="metric-label">режим тишины с первого контакта</span>
           </div>
         </div>
       </div>
 
       <div class="hero-aside">
         <div class="glass-card hero-note">
-          <h3>Сложные системы</h3>
+          <h3>Сложные задачи — наша зона</h3>
           <p>
-            Проектируем механику и электронику, интегрируем сенсоры, силовую часть и ПО.
+            Прецизионные механизмы, силовая электроника, embedded ПО, валидация и тестовые стенды. Строим решение
+            под бизнес-цели, а не под технологии ради технологий.
           </p>
         </div>
         <div class="glass-card hero-note">
-          <h3>Готовность к серии</h3>
+          <h3>Культура партнёрства</h3>
           <p>
-            Готовим документацию, прототипы и решения для серийного производства и сертификации.
+            Выделенный руководитель проекта, прозрачные артефакты и контроль рисков на каждом спринте. Работаем
+            с юридической чистотой и готовностью к аудиту.
           </p>
         </div>
       </div>
