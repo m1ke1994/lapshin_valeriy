@@ -9,18 +9,30 @@
 import { nextTick, onBeforeUnmount, onMounted } from 'vue'
 import AppHeader from '../components/AppHeader.vue'
 
+const REVEAL_SCROLL_START = 400
 let revealObserver
+let revealTargets = []
+let revealStarted = false
 
-const setupScrollReveal = async () => {
+const prepareRevealTargets = async () => {
   if (typeof window === 'undefined') return
-  if (!('IntersectionObserver' in window)) return
-
+  document.documentElement.classList.add('reveal-ready')
   await nextTick()
 
-  const targets = Array.from(document.querySelectorAll('.reveal'))
-  if (!targets.length) return
+  revealTargets = Array.from(document.querySelectorAll('.reveal'))
+}
 
-  document.documentElement.classList.add('reveal-ready')
+const startRevealObserver = () => {
+  if (revealStarted) return
+  revealStarted = true
+
+  if (!revealTargets.length) return
+
+  if (!('IntersectionObserver' in window)) {
+    revealTargets.forEach((target) => target.classList.add('is-visible'))
+    return
+  }
+
   revealObserver = new IntersectionObserver(
     (entries, observer) => {
       entries.forEach((entry) => {
@@ -32,7 +44,22 @@ const setupScrollReveal = async () => {
     { threshold: 0.15, rootMargin: '0px 0px -10% 0px' }
   )
 
-  targets.forEach((target) => revealObserver.observe(target))
+  revealTargets.forEach((target) => revealObserver.observe(target))
+}
+
+const handleRevealScroll = () => {
+  if (typeof window === 'undefined') return
+  const scrollTop = window.scrollY || window.pageYOffset || 0
+  if (scrollTop < REVEAL_SCROLL_START) return
+  startRevealObserver()
+  window.removeEventListener('scroll', handleRevealScroll)
+}
+
+const setupScrollReveal = async () => {
+  if (typeof window === 'undefined') return
+  await prepareRevealTargets()
+  handleRevealScroll()
+  window.addEventListener('scroll', handleRevealScroll, { passive: true })
 }
 
 onMounted(() => {
@@ -48,6 +75,9 @@ onBeforeUnmount(() => {
   if (revealObserver) {
     revealObserver.disconnect()
     revealObserver = null
+  }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('scroll', handleRevealScroll)
   }
 })
 </script>
