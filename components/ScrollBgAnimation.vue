@@ -30,7 +30,7 @@ const framePath = (idx) => {
 }
 
 const frameCount = framesToUse
-const MOBILE_STEP = 2
+const MOBILE_STEP = 10
 const mqMobile =
   typeof window !== 'undefined'
     ? window.matchMedia('(max-width: 768px)')
@@ -451,9 +451,10 @@ const abortFarLoadsAndClearQueue = (centerIndex, direction = 1, fast = false) =>
   }
 
   const stride = getDynamicStride(fastScrollActive)
+  const effectiveStride = isMobile() ? Math.max(stride, MOBILE_STEP) : stride
   const center = clamp(centerIndex, 0, frameCount - 1)
-  const c1 = clamp(center + stride, 0, frameCount - 1)
-  const c2 = clamp(center - stride, 0, frameCount - 1)
+  const c1 = clamp(center + effectiveStride, 0, frameCount - 1)
+  const c2 = clamp(center - effectiveStride, 0, frameCount - 1)
 
   loadFrame(center, { front: true, prio: -3 })
   loadFrame(c1, { front: true, prio: -2 })
@@ -476,19 +477,20 @@ const ensureWindow = (centerIndex, direction = 1, fast = false) => {
   if (destroyed) return
   const { windowFwd, windowBack, boostedFwd } = getEffectiveLimits(fast)
   const stride = getDynamicStride(fast)
+  const effectiveStride = isMobile() ? Math.max(stride, MOBILE_STEP) : stride
 
   const backCount = fast ? Math.min(2, windowBack) : windowBack
   const fwdCount = fast ? boostedFwd : boostedFwd
 
   loadFrame(centerIndex, { front: true, prio: -10 }).catch(() => {})
 
-  for (let i = stride; i <= fwdCount; i += stride) {
+  for (let i = effectiveStride; i <= fwdCount; i += effectiveStride) {
     const idx = centerIndex + i
     if (idx < 0 || idx >= frameCount) continue
     loadFrame(idx).catch(() => {})
   }
 
-  for (let i = stride; i <= backCount; i += stride) {
+  for (let i = effectiveStride; i <= backCount; i += effectiveStride) {
     const idx = centerIndex - i
     if (idx < 0 || idx >= frameCount) continue
     loadFrame(idx).catch(() => {})
@@ -1222,11 +1224,12 @@ onMounted(() => {
   syncScrollState()
 
   // warmup: first frames
+  const warmupFrames = isMobile() ? [0, 2, 4] : [0, 1, 2, 3]
   loadFrame(0, { front: true, prio: -80 })
     .then(() => {
-      drawFrame(0, { fast: false, stride: 1 })
-      ensureWindow(0, 1, false)
-      return Promise.all([loadFrame(1), loadFrame(2), loadFrame(3)].map((p) => p.catch(() => {})))
+      drawFrame(applyMobileFrameStep(0), { fast: false, stride: 1 })
+      ensureWindow(applyMobileFrameStep(0), 1, false)
+      return Promise.all(warmupFrames.map((idx) => loadFrame(idx).catch(() => {})))
     })
     .catch(() => {})
     .finally(() => {
