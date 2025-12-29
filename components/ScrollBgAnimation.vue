@@ -1,7 +1,13 @@
 <template>
-  <section ref="section" class="scroll-wrapper" aria-hidden="true">
+  <!-- Canvas always decorative; loader is the only “interactive” thing -->
+  <section ref="section" class="scroll-wrapper" :aria-hidden="!navLoading">
     <div class="pin">
       <canvas ref="canvas"></canvas>
+    </div>
+
+    <!-- Loader overlay -->
+    <div v-if="navLoading" class="nav-loader" role="status" aria-live="polite" aria-label="Загрузка кадров фона">
+      <div class="nav-loader__spinner"></div>
     </div>
   </section>
 </template>
@@ -24,6 +30,8 @@ const framePath = (idx) => {
 }
 
 const frameCount = framesToUse
+
+// caches / queues
 const frameCache = new Map() // idx -> ImageBitmap | HTMLImageElement
 const pending = new Map() // idx -> Promise
 const queued = new Set() // idx
@@ -57,7 +65,7 @@ const LAYOUT_THROTTLE_MS = 200
 // fast scroll reprioritize / coarse mode
 const JUMP_THRESHOLD_FRAMES = 120
 const FAST_JUMP_THRESHOLD_FRAMES = 60
-const FAST_EXIT_STREAK = 6 // сколько тиков подряд нужно "не fast", чтобы вернуться к точному
+const FAST_EXIT_STREAK = 6
 const STRIDE_FAST = 4
 const STRIDE_FAST_LOW = 8
 const STRIDE_SLOW_LOW = 2
@@ -67,7 +75,7 @@ const BASE_LIMITS_MOBILE = { concurrent: 2, windowFwd: 12, windowBack: 6 }
 const LOW_QUALITY_LIMITS = { windowFwd: 10, windowBack: 5, concurrentDesktop: 3, concurrentMobile: 2 }
 const REDUCED_LIMITS = { windowFwd: 6, windowBack: 3, concurrentDesktop: 2, concurrentMobile: 1 }
 
-// anchors
+// anchors (scroll -> frames mapping)
 const anchorConfig = [
   { id: 'top', frameProgress: 0 },
   { id: 'values', frameProgress: 0.13 },
@@ -78,10 +86,44 @@ const anchorConfig = [
   { id: 'projects', frameProgress: 0.8 },
   { id: 'contacts', frameProgress: 0.98 },
 ]
+
+// NAV: заданные значения 0..118 (шкала), конвертируем в 0..frameCount-1
+const NAV_TO_FRAME = {
+  philosophy: 0,
+  methodology: 16,
+  direction: 32,
+  trust: 52,
+  projects: 72,
+  contacts: 96,
+  consultation: 118,
+}
+const NAV_TO_DOM_ID = {
+  philosophy: 'values',
+  methodology: 'approach',
+  direction: 'competencies',
+  trust: 'trust',
+  projects: 'projects',
+  contacts: 'contacts',
+  consultation: 'contacts',
+}
+const NAV_MAX = 118
+
+// nav smoothing
+const NAV_PRELOAD_RADIUS = 6                  // меньше окно перед твином для быстрого старта
+const NAV_NEARBY_READY_RADIUS = 3
+const NAV_TWEEN_DURATION = 950
+
+// corridor preload to reduce jerks on long jumps
+const NAV_CORRIDOR_BACK = 10
+const NAV_CORRIDOR_FORWARD_MIN = 26
+const NAV_CORRIDOR_FORWARD_MAX = 180
+
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 let keyframes = []
 
 // state
 const targetProgress = ref(0)
+const navLoading = ref(false)
 let currentProgress = 0
 
 let rafId = 0
@@ -128,6 +170,11 @@ let lastRenderedIndex = -1
 // loader generation to ignore stale completions after jumps
 let loadGeneration = 0
 
+// NAV runtime
+let isNavAnimating = false
+let navTweenId = 0
+let navGen = 0
+
 const frameTimes = []
 
 const clearStaticBackground = () => {
@@ -151,13 +198,7 @@ const clearStaticBackground = () => {
 const measureScrollRange = () => {
   const doc = document.documentElement
   const body = document.body
-  const fullHeight = Math.max(
-    body.scrollHeight,
-    body.offsetHeight,
-    doc.clientHeight,
-    doc.scrollHeight,
-    doc.offsetHeight
-  )
+  const fullHeight = Math.max(body.scrollHeight, body.offsetHeight, doc.clientHeight, doc.scrollHeight, doc.offsetHeight)
   return Math.max(1, fullHeight - window.innerHeight)
 }
 
@@ -297,7 +338,6 @@ const getEffectiveLimits = (fastScroll = false) => {
     maxConcurrent = isMobile || isSafari ? REDUCED_LIMITS.concurrentMobile : REDUCED_LIMITS.concurrentDesktop
   }
 
-  // небольшая прибавка concurrency на десктопе при fast scroll (если не reduced)
   if (fastScroll && !reduceMotion && !isMobile && !isSafari) {
     maxConcurrent = Math.min(8, maxConcurrent + 2)
   }
@@ -315,7 +355,6 @@ const getDynamicStride = (fast) => {
 // --- Priority queue helpers ---
 const computePrio = (index, direction = 1) => {
   const dist = Math.abs(index - lastDesiredBase)
-  // чуть предпочтительнее вперёд по направлению движения
   const bias = direction >= 0 ? (index >= lastDesiredBase ? 0 : 0.35) : (index <= lastDesiredBase ? 0 : 0.35)
   return dist + bias
 }
@@ -346,10 +385,7 @@ const pumpQueue = () => {
   if (destroyed) return
   const { maxConcurrent } = getEffectiveLimits(fastScrollActive)
 
-  // сортировка по приоритету (front задачи обычно с prio = -1/-2 и останутся сверху)
-  if (loadQueue.length > 1) {
-    loadQueue.sort((a, b) => a.prio - b.prio)
-  }
+  if (loadQueue.length > 1) loadQueue.sort((a, b) => a.prio - b.prio)
 
   while (activeLoads < maxConcurrent && loadQueue.length) {
     const next = loadQueue.shift()
@@ -378,32 +414,27 @@ const loadFrame = (index, { front = false, prio = null } = {}) => {
 const abortFarLoadsAndClearQueue = (centerIndex, direction = 1, fast = false) => {
   const { windowFwd, windowBack, boostedFwd } = getEffectiveLimits(fast)
 
-  // keep диапазон: при fast сильно меньше назад и ограниченный вперед
   const keepBack = fast ? 2 : windowBack + PRUNE_MARGIN
   const keepFwd = fast ? Math.max(10, Math.floor((boostedFwd + 4) / 2)) : boostedFwd + PRUNE_MARGIN
   const minKeep = centerIndex - keepBack
   const maxKeep = centerIndex + keepFwd
 
-  // 1) очищаем очередь полностью (FIFO хвосты вредят при jump)
   loadQueue.length = 0
   queued.clear()
 
-  // 2) abort активных, которые далеко
   for (const [idx, controller] of abortControllers.entries()) {
     if (idx < minKeep || idx > maxKeep) {
       controller.abort()
       abortControllers.delete(idx)
-      pending.delete(idx) // важно: чтобы не висел pending
+      pending.delete(idx)
     }
   }
 
-  // 3) быстрый набор супер-приоритетов: центр и ближайшие
   const stride = getDynamicStride(fastScrollActive)
   const center = clamp(centerIndex, 0, frameCount - 1)
   const c1 = clamp(center + stride, 0, frameCount - 1)
   const c2 = clamp(center - stride, 0, frameCount - 1)
 
-  // prio отрицательные, чтобы наверх
   loadFrame(center, { front: true, prio: -3 })
   loadFrame(c1, { front: true, prio: -2 })
   loadFrame(c2, { front: true, prio: -1 })
@@ -426,25 +457,21 @@ const ensureWindow = (centerIndex, direction = 1, fast = false) => {
   const { windowFwd, windowBack, boostedFwd } = getEffectiveLimits(fast)
   const stride = getDynamicStride(fast)
 
-  // при fast: назад почти не грузим
   const backCount = fast ? Math.min(2, windowBack) : windowBack
   const fwdCount = fast ? boostedFwd : boostedFwd
 
-  // центр всегда первым (если ещё не в pending/cache)
   loadFrame(centerIndex, { front: true, prio: -10 }).catch(() => {})
 
-  // вперед
   for (let i = stride; i <= fwdCount; i += stride) {
     const idx = centerIndex + i
     if (idx < 0 || idx >= frameCount) continue
-    loadFrame(idx, { front: false }).catch(() => {})
+    loadFrame(idx).catch(() => {})
   }
 
-  // назад
   for (let i = stride; i <= backCount; i += stride) {
     const idx = centerIndex - i
     if (idx < 0 || idx >= frameCount) continue
-    loadFrame(idx, { front: false }).catch(() => {})
+    loadFrame(idx).catch(() => {})
   }
 }
 
@@ -494,7 +521,6 @@ const startLoadTask = (index, resolve, reject, gen) => {
   const finish = (frame) => {
     settle()
 
-    // если устаревшее поколение или компонент уже уничтожен — не кешируем
     if (destroyed || gen !== loadGeneration) {
       if (frame && typeof frame.close === 'function') frame.close()
       resolve(null)
@@ -504,7 +530,6 @@ const startLoadTask = (index, resolve, reject, gen) => {
 
     frameCache.set(index, frame)
 
-    // если этот кадр релевантен текущей базе — дорисуем
     if (Math.abs(index - lastDesiredBase) <= 1) {
       if (reduceMotion) scheduleReducedRender()
       else if (!rafId) startRafIfNeeded()
@@ -546,7 +571,6 @@ const startLoadTask = (index, resolve, reject, gen) => {
         fail(e, true)
         return
       }
-      // fallback decode direct
       try {
         if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError')
         const img = await decodeWithImage(url)
@@ -564,7 +588,73 @@ const startLoadTask = (index, resolve, reject, gen) => {
   attemptFetch()
 }
 
+// --- NAV helpers ---
+const isFrameWindowReady = (targetFrame, radius = NAV_NEARBY_READY_RADIUS) => {
+  const start = Math.max(0, targetFrame - radius)
+  const end = Math.min(frameCount - 1, targetFrame + radius)
+  for (let i = start; i <= end; i += 1) {
+    if (!frameCache.has(i)) return false
+  }
+  return true
+}
+
+const ensureFramesAround = async (targetFrame, radius = NAV_PRELOAD_RADIUS) => {
+  const start = Math.max(0, targetFrame - radius)
+  const end = Math.min(frameCount - 1, targetFrame + radius)
+  const targetPromise = loadFrame(targetFrame, { front: true, prio: -40 })
+    .then((frame) => frame || null)
+    .catch(() => null)
+
+  // fire-and-forget остальное окно, чтобы не держать лоадер
+  const extras = []
+  for (let i = start; i <= end; i += 1) {
+    if (i === targetFrame) continue
+    extras.push(loadFrame(i).catch(() => null))
+  }
+  Promise.allSettled(extras).catch(() => {})
+
+  const targetResult = await targetPromise
+  return Boolean(targetResult)
+}
+
+// коридор: грузим “полосу” по направлению движения, чтобы не прыгать на nearby кадры
+const ensureNavCorridor = async (fromFrameFloat, toFrame) => {
+  const total = frameCount - 1
+  const from = clamp(Math.floor(fromFrameFloat), 0, total)
+  const to = clamp(Math.floor(toFrame), 0, total)
+  const dir = to >= from ? 1 : -1
+  const span = Math.abs(to - from)
+
+  const forward = clamp(Math.floor(span * 0.25), NAV_CORRIDOR_FORWARD_MIN, NAV_CORRIDOR_FORWARD_MAX)
+  const start = clamp(from - NAV_CORRIDOR_BACK, 0, total)
+  const end = clamp(from + dir * forward, 0, total)
+
+  // шаг можно увеличить на очень больших прыжках, чтобы не забить сеть
+  const step = span > 700 ? 3 : span > 400 ? 2 : 1
+
+  const tasks = []
+  if (dir > 0) {
+    for (let i = start; i <= end; i += step) {
+      tasks.push(loadFrame(i, { prio: i === from ? -60 : null }).catch(() => null))
+    }
+  } else {
+    for (let i = start; i >= end; i -= step) {
+      tasks.push(loadFrame(i, { prio: i === from ? -60 : null }).catch(() => null))
+    }
+  }
+
+  await Promise.allSettled(tasks)
+}
+
+const resolveNavTargetFrame = (sectionId) => {
+  const raw = NAV_TO_FRAME[sectionId]
+  if (typeof raw !== 'number' || Number.isNaN(raw)) return null
+  // 0..118 -> 0..(frameCount-1)
+  return Math.round((raw / NAV_MAX) * (frameCount - 1))
+}
+
 // --- drawing ---
+// обычная рисовалка (со “nearby” фолбэком) — для scroll режима
 const drawFrame = (frameFloat, { fast = false, stride = 1 } = {}) => {
   if (destroyed) return false
   const el = canvas.value
@@ -601,7 +691,6 @@ const drawFrame = (frameFloat, { fast = false, stride = 1 } = {}) => {
     baseImg === lastDrawnBaseRef &&
     (nextImg || null) === (lastDrawnNextRef || null)
 
-  // важное: если раньше был fallback, а теперь exact — hasExactBase изменится и мы перерисуем
   if (unchanged) return true
 
   const canvasWidth = el.width || 0
@@ -641,6 +730,62 @@ const drawFrame = (frameFloat, { fast = false, stride = 1 } = {}) => {
   return true
 }
 
+// строгая рисовалка (без nearby-fallback) — только для NAV твина, чтобы не было “рывков”
+const drawFrameStrict = (frameFloat) => {
+  if (destroyed) return false
+  const el = canvas.value
+  if (!el) return false
+  configureContext()
+  if (!ctx) return false
+
+  const total = frameCount - 1
+  const base = clamp(Math.floor(frameFloat), 0, total)
+  const mix = clamp(frameFloat - base, 0, 1)
+
+  const baseImg = frameCache.get(base)
+  if (!baseImg) return false
+
+  const allowMix = !lowQuality && !reduceMotion
+  const nextImg = allowMix && mix > 0.001 ? frameCache.get(Math.min(total, base + 1)) : null
+  const renderMix = nextImg ? mix : 0
+
+  const canvasWidth = el.width || 0
+  const canvasHeight = el.height || 0
+  if (!canvasWidth || !canvasHeight) return false
+
+  const imgWidth = baseImg.naturalWidth || baseImg.width
+  const imgHeight = baseImg.naturalHeight || baseImg.height
+  if (!imgWidth || !imgHeight) return false
+
+  const scale = Math.max(canvasWidth / imgWidth, canvasHeight / imgHeight)
+  const drawWidth = imgWidth * scale
+  const drawHeight = imgHeight * scale
+  const offsetX = (canvasWidth - drawWidth) * 0.5
+  const offsetY = (canvasHeight - drawHeight) * 0.5
+
+  ctx.imageSmoothingEnabled = !(lowQuality || reduceMotion)
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.globalAlpha = 1
+  ctx.drawImage(baseImg, offsetX, offsetY, drawWidth, drawHeight)
+
+  if (nextImg && renderMix > 0.001) {
+    ctx.globalAlpha = renderMix
+    ctx.drawImage(nextImg, offsetX, offsetY, drawWidth, drawHeight)
+    ctx.globalAlpha = 1
+  }
+
+  // обновим кэши “последнего нарисованного”, чтобы nav стартовал от факта
+  lastDrawnIndex = base
+  lastDrawnMix = renderMix
+  lastRenderedFrame = baseImg
+  lastRenderedIndex = base
+  lastDrawnHadExact = true
+  lastDrawnBaseRef = baseImg
+  lastDrawnNextRef = nextImg || null
+
+  return true
+}
+
 const updateQuality = (frameMs, progressDelta) => {
   if (reduceMotion) return
   const avg = recordFrameTime(frameMs)
@@ -661,7 +806,7 @@ const updateQuality = (frameMs, progressDelta) => {
   }
 }
 
-// RAF tick
+// RAF tick (scroll mode)
 const tick = () => {
   rafId = 0
   if (destroyed) return
@@ -679,7 +824,6 @@ const tick = () => {
   if (!fastScrollActive) fastExitStreak += 1
   else fastExitStreak = 0
 
-  // easing
   const delta = Math.abs(targetProgress.value - currentProgress)
   if (delta > SNAP_DELTA) {
     currentProgress = currentProgress + (targetProgress.value - currentProgress) * SNAP_LERP
@@ -703,17 +847,13 @@ const tick = () => {
   const stride = getDynamicStride(fastScrollActive)
 
   const rawBaseIndex = Math.floor(rawFrameFloat)
-  const quantBase =
-    stride > 1 ? clamp(Math.round(rawBaseIndex / stride) * stride, 0, frameCount - 1) : rawBaseIndex
+  const quantBase = stride > 1 ? clamp(Math.round(rawBaseIndex / stride) * stride, 0, frameCount - 1) : rawBaseIndex
 
-  // jump reprioritize (главная лечилка от "очередь не успевает")
   maybeReprioritizeOnJump(quantBase, direction)
 
-  // при fast: рисуем квантованный кадр без mix; при выходе из fast — снова точный
   const fast = fastScrollActive
   const drawFloat = fast && stride > 1 ? quantBase : rawFrameFloat
 
-  // центр-first + windowing
   ensureWindow(quantBase, direction, fast)
   pruneCache(quantBase)
 
@@ -721,9 +861,7 @@ const tick = () => {
 
   updateQuality(frameMs, progressDelta)
 
-  // если fast закончился стабильно — принудительно догрузи точный кадр
   if (wasFast && !fastScrollActive && fastExitStreak >= FAST_EXIT_STREAK) {
-    // bump generation, чтобы старые fast-очереди не мешали точному
     loadGeneration += 1
     abortFarLoadsAndClearQueue(rawBaseIndex, direction, false)
     ensureWindow(rawBaseIndex, direction, false)
@@ -741,9 +879,7 @@ const tick = () => {
     (!destroyed && progressGap > SNAP_EPS && (drew || allowRetry)) ||
     (!destroyed && waitingForFrames && allowRetry)
 
-  if (shouldContinue) {
-    rafId = window.requestAnimationFrame(tick)
-  }
+  if (shouldContinue) rafId = window.requestAnimationFrame(tick)
 }
 
 const renderReducedFrame = () => {
@@ -781,8 +917,9 @@ const stopRaf = () => {
   rafId = 0
 }
 
+// IMPORTANT: ignore scroll-driven updates while nav animation is active
 const onScroll = () => {
-  if (destroyed) return
+  if (destroyed || isNavAnimating) return
   syncScrollState()
   startRafIfNeeded()
 }
@@ -845,6 +982,193 @@ const setupLayoutObserver = () => {
   layoutObserver = observer
 }
 
+const normalizeSectionId = (value = '') => value.replace(/^#/, '').trim() || 'top'
+
+const scrollSectionIntoView = (hash, sectionId) =>
+  new Promise((resolve) => {
+    const domId = NAV_TO_DOM_ID[sectionId] || sectionId
+    const target =
+      (hash ? document.querySelector(hash) : null) ||
+      document.getElementById(domId) ||
+      document.querySelector(`#${domId}`)
+
+    if (!target) {
+      resolve()
+      return
+    }
+
+    const headerEl = document.querySelector('.header')
+    const offset = (headerEl?.offsetHeight || 80) + 10
+    const start = window.scrollY || window.pageYOffset || 0
+    const end = target.getBoundingClientRect().top + start - offset
+    const duration = 900
+    const started = performance.now()
+
+    const step = (ts) => {
+      const t = clamp((ts - started) / duration, 0, 1)
+      const eased = easeInOutCubic(t)
+      const next = start + (end - start) * eased
+      window.scrollTo(0, next)
+      if (t < 1) {
+        window.requestAnimationFrame(step)
+      } else {
+        if (hash) window.history.replaceState(null, '', hash)
+        resolve()
+      }
+    }
+
+    window.requestAnimationFrame(step)
+  })
+
+/**
+ * NAV tween:
+ * - does NOT touch targetProgress/currentProgress (scroll model must stay consistent)
+ * - draws only if required frames are ready (strict)
+ * - keeps loading corridor while tweening
+ */
+const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGen) =>
+  new Promise((resolve) => {
+    if (destroyed || currentGen !== navGen) return resolve()
+
+    if (navTweenId) cancelAnimationFrame(navTweenId)
+    stopRaf()
+
+    const total = frameCount - 1
+    const fromFrame = clamp(
+      lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix,
+      0,
+      total
+    )
+    const toFrame = clamp(targetFrame, 0, total)
+    const direction = toFrame >= fromFrame ? 1 : -1
+    const startTs = performance.now()
+
+    const step = (ts) => {
+      if (destroyed || currentGen !== navGen) {
+        navTweenId = 0
+        return resolve()
+      }
+
+      const t = clamp((ts - startTs) / durationMs, 0, 1)
+      const eased = easeInOutCubic(t)
+      const frameFloat = fromFrame + (toFrame - fromFrame) * eased
+      const baseIndex = Math.floor(frameFloat)
+
+      ensureWindow(baseIndex, direction, false)
+      pruneCache(baseIndex)
+
+      // strict draw: if missing frames, do NOT jump to nearby
+      const drew = drawFrameStrict(frameFloat)
+
+      // if we couldn't draw (frames not ready), keep trying; loader is already hidden,
+      // but frames are being fetched; we still resolve at time end.
+      if (t < 1) {
+        navTweenId = requestAnimationFrame(step)
+      } else {
+        navTweenId = 0
+        // final: try to draw exact target once more (best effort)
+        drawFrameStrict(toFrame)
+        resolve(drew)
+      }
+    }
+
+    navTweenId = requestAnimationFrame(step)
+  })
+
+const handleNavNavigate = async (event) => {
+  const detail = event?.detail || {}
+  const sectionId = normalizeSectionId(detail.sectionId || detail.hash || '')
+  const targetFrame = resolveNavTargetFrame(sectionId)
+  if (typeof targetFrame !== 'number') return
+
+  event?.preventDefault?.()
+
+  const currentGen = ++navGen
+
+  // всегда сбрасываем лоадер на старте (лечит “залипания” при быстрых кликах)
+  navLoading.value = false
+
+  // cancel any running tween
+  if (navTweenId) {
+    cancelAnimationFrame(navTweenId)
+    navTweenId = 0
+  }
+
+  // enter nav mode: stop scroll-driven changes
+  isNavAnimating = true
+
+  // reprioritize loaders towards target
+  loadGeneration += 1
+  const fromFrameFloat = clamp(
+    lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix,
+    0,
+    frameCount - 1
+  )
+  const dir = targetFrame >= fromFrameFloat ? 1 : -1
+  abortFarLoadsAndClearQueue(Math.floor(targetFrame), dir, false)
+  pumpQueue()
+
+  // show loader only if we are not ready
+  const needsLoader = !isFrameWindowReady(targetFrame, NAV_NEARBY_READY_RADIUS)
+  if (needsLoader) navLoading.value = true
+
+  let ready = false
+  try {
+    // 1) гарантируем точку назначения (+окрестность)
+    const okTarget = await ensureFramesAround(targetFrame, NAV_PRELOAD_RADIUS)
+    if (currentGen !== navGen) return
+
+    // 2) грузим коридор от текущего кадра в сторону движения — резко снижает “дёрганье”
+    await ensureNavCorridor(fromFrameFloat, targetFrame)
+    if (currentGen !== navGen) return
+
+    // 3) ещё раз проверяем цель (на случай, если сеть отвалилась)
+    ready = okTarget && frameCache.has(targetFrame)
+  } catch (err) {
+    console.error('Failed to preload nav frames', err)
+  } finally {
+    if (currentGen === navGen) navLoading.value = false
+  }
+
+  if (currentGen !== navGen) return
+
+  if (!ready) {
+    // exit nav mode safely
+    isNavAnimating = false
+    syncScrollState()
+    startRafIfNeeded()
+    return
+  }
+
+  // reduced motion: no “cinema” tween
+  if (reduceMotion) {
+    drawFrameStrict(targetFrame)
+    await scrollSectionIntoView(detail.hash, sectionId)
+    if (currentGen !== navGen) return
+    isNavAnimating = false
+    syncScrollState()
+    startRafIfNeeded()
+    return
+  }
+
+  try {
+    await tweenFrameToNav(targetFrame, NAV_TWEEN_DURATION, currentGen)
+  } catch (err) {
+    console.error('Failed to tween to nav frame', err)
+  }
+
+  if (currentGen !== navGen) return
+
+  await scrollSectionIntoView(detail.hash, sectionId)
+
+  if (currentGen !== navGen) return
+
+  // exit nav mode: resync with real scroll model
+  isNavAnimating = false
+  syncScrollState()
+  startRafIfNeeded()
+}
+
 onMounted(() => {
   const ua = navigator.userAgent || ''
   isMobile = window.matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod/i.test(ua)
@@ -856,8 +1180,8 @@ onMounted(() => {
   rebuildKeyframes()
   syncScrollState()
 
-  // warmup: первый кадр и немного вперед
-  loadFrame(0, { front: true, prio: -50 })
+  // warmup: first frames
+  loadFrame(0, { front: true, prio: -80 })
     .then(() => {
       drawFrame(0, { fast: false, stride: 1 })
       ensureWindow(0, 1, false)
@@ -871,6 +1195,10 @@ onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
   document.addEventListener('visibilitychange', onVisibilityChange)
+
+  // NAV channel
+  window.addEventListener('scroll-bg:navigate', handleNavNavigate, false)
+
   setupLayoutObserver()
 })
 
@@ -880,6 +1208,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onResize)
   document.removeEventListener('visibilitychange', onVisibilityChange)
+  window.removeEventListener('scroll-bg:navigate', handleNavNavigate, false)
 
   if (layoutObserver) layoutObserver.disconnect()
   if (layoutObserverId) window.cancelAnimationFrame(layoutObserverId)
@@ -890,6 +1219,7 @@ onBeforeUnmount(() => {
 
   if (rafId) window.cancelAnimationFrame(rafId)
   if (resizeId) window.cancelAnimationFrame(resizeId)
+  if (navTweenId) window.cancelAnimationFrame(navTweenId)
 
   for (const controller of abortControllers.values()) controller.abort()
   abortControllers.clear()
@@ -939,5 +1269,34 @@ onBeforeUnmount(() => {
   display: block;
   pointer-events: none;
   z-index: 0;
+}
+
+.nav-loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 18, 26, 0.28);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 9999;
+  pointer-events: all;
+}
+
+.nav-loader__spinner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.38);
+  border-top-color: rgba(var(--accent-rgb), 0.9);
+  animation: nav-spin 0.9s linear infinite;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+}
+
+@keyframes nav-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+
 }
 </style>

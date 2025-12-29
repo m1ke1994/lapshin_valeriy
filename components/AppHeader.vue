@@ -143,6 +143,7 @@ const getHeaderOffset = () => {
 const scrollToHash = (hash: string) => {
   if (typeof window === 'undefined') return
   closeMenu()
+  activeHash.value = hash
 
   const target = document.querySelector(hash)
   const offset = getHeaderOffset()
@@ -213,7 +214,7 @@ const setupActiveSectionObserver = () => {
     },
     {
       root: null,
-      rootMargin: `-${offset}px 0px -55% 0px`,
+      rootMargin: `-${offset}px 0px -40% 0px`,
       threshold: [0.12, 0.22, 0.35, 0.5, 0.65, 0.8],
     }
   )
