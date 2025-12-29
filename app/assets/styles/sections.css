@@ -61,7 +61,7 @@
   font-size: 11px;
   letter-spacing: 0.32em;
   text-transform: uppercase;
-  color: rgba(199, 156, 60, 0.85);
+  color: rgba(var(--accent-rgb), 0.88);
 }
 
 h2 {
@@ -88,8 +88,8 @@ h3 {
 .glass-card {
   padding: 28px;
   border-radius: 20px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.72));
-  border: 1px solid rgba(199, 156, 60, 0.3);
+  background: linear-gradient(135deg, var(--surface-strong), rgba(255, 255, 255, 0.72));
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
   backdrop-filter: blur(16px);
   box-shadow: 0 28px 60px rgba(15, 18, 26, 0.18);
 }
@@ -123,14 +123,14 @@ h3 {
 }
 
 .btn-primary {
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.8));
-  color: #6b4b12;
-  border: 1px solid rgba(199, 156, 60, 0.45);
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82));
+  color: var(--accent-strong);
+  border: 1px solid rgba(var(--accent-rgb), 0.45);
   box-shadow: 0 16px 40px rgba(15, 18, 26, 0.2);
 }
 
 .btn-ghost {
-  border: 1px solid rgba(199, 156, 60, 0.3);
+  border: 1px solid rgba(var(--accent-rgb), 0.3);
   color: var(--text);
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 10px 28px rgba(15, 18, 26, 0.12);
@@ -152,7 +152,7 @@ h3 {
   justify-content: space-between;
   gap: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid rgba(27, 31, 40, 0.12);
+  border-bottom: 1px solid rgba(var(--text-rgb), 0.12);
 }
 
 .metric-value {
@@ -163,7 +163,7 @@ h3 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.2em;
-  color: rgba(27, 31, 40, 0.6);
+  color: rgba(var(--text-rgb), 0.6);
 }
 
 .section-head {
@@ -207,14 +207,14 @@ h3 {
 .cert-placeholder {
   height: 120px;
   border-radius: 14px;
-  border: 1px dashed rgba(199, 156, 60, 0.45);
+  border: 1px dashed rgba(var(--accent-rgb), 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: rgba(184, 132, 26, 0.9);
+  color: rgba(var(--accent-rgb), 0.82);
   margin-bottom: 16px;
 }
 
@@ -223,7 +223,7 @@ h3 {
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.22em;
-  color: rgba(27, 31, 40, 0.55);
+  color: rgba(var(--text-rgb), 0.55);
 }
 
 .contact-grid {

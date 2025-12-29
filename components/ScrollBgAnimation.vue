@@ -74,6 +74,7 @@ const anchorConfig = [
   { id: 'approach', frameProgress: 0.27 },
   { id: 'competencies', frameProgress: 0.52 },
   { id: 'trust', frameProgress: 0.6 },
+  { id: 'certificates', frameProgress: 0.7 },
   { id: 'projects', frameProgress: 0.8 },
   { id: 'contacts', frameProgress: 0.98 },
 ]

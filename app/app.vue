@@ -87,16 +87,19 @@ onBeforeUnmount(() => {
 @import url('@/assets/styles/sections.css');
 
 :root {
-  --bg: transparent;
+  --bg: #f7f4ec;
   --scroll-bg-image: none;
-  --surface: rgba(255, 255, 255, 0.78);
-  --surface-strong: rgba(255, 255, 255, 0.92);
-  --surface-soft: rgba(255, 255, 255, 0.18);
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-strong: rgba(255, 255, 255, 0.94);
+  --surface-soft: rgba(255, 255, 255, 0.14);
   --text: #0f121a;
+  --text-rgb: 15, 18, 26;
   --muted: #3d4554;
-  --accent: #c79c3c;
-  --accent-strong: #b9871f;
-  --accent-warm: #e2c07a;
+  --muted-rgb: 61, 69, 84;
+  --accent: #d6b36a;
+  --accent-strong: #b88935;
+  --accent-rgb: 214, 179, 106;
+  --accent-soft: rgba(var(--accent-rgb), 0.16);
 }
 
 * {
@@ -105,7 +108,7 @@ onBeforeUnmount(() => {
 
 html {
   scroll-behavior: smooth;
-  background-color: transparent;
+  background-color: var(--bg);
 }
 
 html,
@@ -123,7 +126,7 @@ body {
 body {
   margin: 0;
   font-family: "Manrope", "Segoe UI", sans-serif;
-  background: transparent;
+  background: var(--bg);
   color: var(--text);
 }
 

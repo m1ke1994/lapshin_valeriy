@@ -3,11 +3,9 @@
     <div class="section-inner reveal">
       <div class="section-head cert-head">
         <div class="cert-copy">
-          <p class="eyebrow">Credentials</p>
-          <h2>Certificates &amp; Awards</h2>
-          <p class="lead">
-            Testimonials, diplomas and certificates that validate our work.
-          </p>
+          <p class="eyebrow">{{ copy.eyebrow }}</p>
+          <h2>{{ copy.title }}</h2>
+          <p class="lead">{{ copy.lead }}</p>
         </div>
       </div>
 
@@ -22,11 +20,7 @@
           <div class="cert-media">
             <span class="cert-shine" aria-hidden="true"></span>
             <span class="cert-ring" aria-hidden="true"></span>
-            <img
-              :src="item.src"
-              :alt="item.title"
-              loading="lazy"
-            />
+            <img :src="item.src" :alt="item.title" loading="lazy" />
             <span class="cert-badge">{{ typeLabel(item.type) }}</span>
           </div>
 
@@ -40,27 +34,16 @@
 
     <teleport to="body">
       <transition name="fade">
-        <div
-          v-if="isOpen"
-          class="viewer-overlay"
-          role="dialog"
-          aria-modal="true"
-          @click="close"
-        >
+        <div v-if="isOpen" class="viewer-overlay" role="dialog" aria-modal="true" @click="close">
           <div class="viewer-shell" @click.stop>
             <div class="viewer-top">
               <div class="viewer-meta">
-                <span class="viewer-type">{{ typeLabel(activeItem?.type || "certificate") }}</span>
+                <span class="viewer-type">{{ typeLabel(activeItem?.type || 'certificate') }}</span>
                 <h3 class="viewer-title">{{ activeItem?.title }}</h3>
                 <p class="viewer-subtitle">{{ activeItem?.subtitle }}</p>
               </div>
-              <button
-                ref="closeBtn"
-                type="button"
-                class="viewer-close"
-                @click="close"
-              >
-                Close
+              <button ref="closeBtn" type="button" class="viewer-close" @click="close">
+                {{ copy.actions.close }}
               </button>
             </div>
 
@@ -69,24 +52,20 @@
                 type="button"
                 class="viewer-nav prev"
                 @click="prev"
-                aria-label="Previous"
+                :aria-label="copy.actions.prev"
               >
                 &larr;
               </button>
 
               <figure class="viewer-figure">
-                <img
-                  :src="activeItem?.src"
-                  :alt="activeItem?.title"
-                  draggable="false"
-                />
+                <img :src="activeItem?.src" :alt="activeItem?.title" draggable="false" />
               </figure>
 
               <button
                 type="button"
                 class="viewer-nav next"
                 @click="next"
-                aria-label="Next"
+                :aria-label="copy.actions.next"
               >
                 &rarr;
               </button>
@@ -99,106 +78,69 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useLocale } from '~/composables/useLocale'
+import type { DocType } from '~/content/translations'
 
-type DocType = "review" | "diploma" | "certificate";
+const { t } = useLocale()
+const copy = computed(() => t.value.certificates)
+const items = computed(() => copy.value.items)
 
-type DocItem = {
-  id: string;
-  src: string;
-  title: string;
-  subtitle: string;
-  type: DocType;
-};
-
-const items = ref<DocItem[]>([
-  {
-    id: "cerc1",
-    src: "/certificates/cerc1.JPG",
-    title: "Review",
-    subtitle: "Reference letter (AstraZeneca / RU)",
-    type: "review",
-  },
-  {
-    id: "cerc2",
-    src: "/certificates/cerc2.JPG",
-    title: "Diploma",
-    subtitle: "SPS/IPC/DRIVES-2012 (Germany)",
-    type: "diploma",
-  },
-  {
-    id: "cerc3",
-    src: "/certificates/cerc3.jpg",
-    title: "Diploma",
-    subtitle: "INTHUB 2022 - Bronze Medal",
-    type: "diploma",
-  },
-  {
-    id: "cerc4",
-    src: "/certificates/cerc4.JPG",
-    title: "Certificate",
-    subtitle: "Certificate of conformity (GOST R)",
-    type: "certificate",
-  },
-]);
-
-function typeLabel(t: DocType) {
-  if (t === "review") return "Review";
-  if (t === "diploma") return "Diploma";
-  return "Certificate";
+function typeLabel(type: DocType) {
+  return copy.value.typeLabels[type] || type
 }
 
-const isOpen = ref(false);
-const activeIndex = ref<number>(0);
-const closeBtn = ref<HTMLButtonElement | null>(null);
+const isOpen = ref(false)
+const activeIndex = ref<number>(0)
+const closeBtn = ref<HTMLButtonElement | null>(null)
 
-const activeItem = computed(() => items.value[activeIndex.value]);
+const activeItem = computed(() => items.value[activeIndex.value])
 
-let lastFocused: Element | null = null;
-let prevBodyOverflow = "";
+let lastFocused: Element | null = null
+let prevBodyOverflow = ''
 
 function open(index: number) {
-  lastFocused = document.activeElement;
-  prevBodyOverflow = document.body.style.overflow;
-  document.body.style.overflow = "hidden";
+  lastFocused = document.activeElement
+  prevBodyOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
 
-  activeIndex.value = index;
-  isOpen.value = true;
+  activeIndex.value = index
+  isOpen.value = true
 
-  nextTick(() => closeBtn.value?.focus());
+  nextTick(() => closeBtn.value?.focus())
 }
 
 function openById(id: string) {
-  const idx = items.value.findIndex((x) => x.id === id);
-  if (idx >= 0) open(idx);
+  const idx = items.value.findIndex((x) => x.id === id)
+  if (idx >= 0) open(idx)
 }
 
 function close() {
-  isOpen.value = false;
-  document.body.style.overflow = prevBodyOverflow || "";
+  isOpen.value = false
+  document.body.style.overflow = prevBodyOverflow || ''
 
   if (lastFocused instanceof HTMLElement) {
-    nextTick(() => lastFocused?.focus());
+    nextTick(() => lastFocused?.focus())
   }
 }
 
 function next() {
-  activeIndex.value = (activeIndex.value + 1) % items.value.length;
+  activeIndex.value = (activeIndex.value + 1) % items.value.length
 }
 
 function prev() {
-  activeIndex.value = (activeIndex.value - 1 + items.value.length) % items.value.length;
+  activeIndex.value = (activeIndex.value - 1 + items.value.length) % items.value.length
 }
 
 function onKeydown(e: KeyboardEvent) {
-  if (!isOpen.value) return;
-  if (e.key === "Escape") close();
-  if (e.key === "ArrowRight") next();
-  if (e.key === "ArrowLeft") prev();
+  if (!isOpen.value) return
+  if (e.key === 'Escape') close()
+  if (e.key === 'ArrowRight') next()
+  if (e.key === 'ArrowLeft') prev()
 }
 
-onMounted(() => window.addEventListener("keydown", onKeydown));
-onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <style scoped>
@@ -215,7 +157,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   width: 320px;
   height: 320px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(199, 156, 60, 0.22), rgba(199, 156, 60, 0));
+  background: radial-gradient(circle, rgba(var(--accent-rgb), 0.22), rgba(var(--accent-rgb), 0));
   filter: blur(16px);
   pointer-events: none;
 }
@@ -254,7 +196,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   padding: 14px;
   border-radius: 18px;
   text-align: left;
-  border: 1px solid rgba(199, 156, 60, 0.32);
+  border: 1px solid rgba(var(--accent-rgb), 0.32);
   background: linear-gradient(140deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.78));
   cursor: pointer;
   transition: transform 200ms ease, box-shadow 200ms ease, border-color 200ms ease;
@@ -262,12 +204,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
 .cert-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(199, 156, 60, 0.55);
+  border-color: rgba(var(--accent-rgb), 0.55);
   box-shadow: 0 22px 46px rgba(15, 18, 26, 0.22);
 }
 
 .cert-card:focus-visible {
-  outline: 3px solid rgba(199, 156, 60, 0.55);
+  outline: 3px solid rgba(var(--accent-rgb), 0.55);
   outline-offset: 2px;
 }
 
@@ -302,7 +244,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  border: 1px solid rgba(199, 156, 60, 0.36);
+  border: 1px solid rgba(var(--accent-rgb), 0.36);
   box-shadow: 0 12px 26px rgba(15, 18, 26, 0.18);
 }
 
@@ -343,7 +285,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: radial-gradient(circle at 20% 20%, rgba(199, 156, 60, 0.12), transparent 42%), rgba(5, 7, 10, 0.86);
+  background:
+    radial-gradient(circle at 20% 20%, rgba(var(--accent-rgb), 0.12), transparent 42%),
+    rgba(5, 7, 10, 0.86);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   display: flex;
@@ -355,7 +299,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 .viewer-shell {
   width: min(1180px, 94vw);
   border-radius: 20px;
-  background: rgba(15, 18, 26, 0.82);
+  background: rgba(15, 18, 26, 0.86);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
   padding: 18px;
@@ -411,7 +355,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 .viewer-close:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(199, 156, 60, 0.5);
+  border-color: rgba(var(--accent-rgb), 0.5);
 }
 
 .viewer-body {
@@ -458,7 +402,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 
 .viewer-nav:hover {
   transform: translateY(-50%) scale(1.05);
-  border-color: rgba(199, 156, 60, 0.5);
+  border-color: rgba(var(--accent-rgb), 0.5);
   background: rgba(15, 18, 26, 0.78);
 }
 

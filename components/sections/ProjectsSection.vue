@@ -2,27 +2,25 @@
   <section id="projects" class="section">
     <div class="section-inner reveal">
       <div class="section-head">
-        <p class="eyebrow">Проекты</p>
-        <h2>Направления, в которых мы сильны и которые выводим на рынок.</h2>
-        <p class="lead">Часть портфеля закрыта NDA. Ниже — примеры архитектур и форматов сопровождения.</p>
+        <p class="eyebrow">{{ copy.eyebrow }}</p>
+        <h2>{{ copy.title }}</h2>
+        <p class="lead">{{ copy.lead }}</p>
       </div>
       <div class="cards-grid">
-        <article class="glass-card">
-          <h3>Роботизированная линия контроля качества</h3>
-          <p>Система высокоточной механики, машинного зрения и силовой электроники для непрерывной проверки изделий без остановки линии.</p>
-          <p class="project-meta">Автопром / 8 месяцев от концепта до пилота</p>
-        </article>
-        <article class="glass-card">
-          <h3>Медицинский модуль визуализации</h3>
-          <p>Проектирование электроники, оптомеханики и прошивки, подготовка технических файлов, сопровождение лабораторных испытаний.</p>
-          <p class="project-meta">MedTech / предсерийная партия</p>
-        </article>
-        <article class="glass-card">
-          <h3>Индустриальный IoT-контроллер</h3>
-          <p>EMI/EMC-устойчивость, силовая часть, драйверы датчиков, защищённые протоколы, цифровой двойник для тестирования в поле.</p>
-          <p class="project-meta">Промышленность / 60 000+ устройств в эксплуатации</p>
+        <article v-for="card in copy.cards" :key="card.title" class="glass-card">
+          <h3>{{ card.title }}</h3>
+          <p>{{ card.body }}</p>
+          <p class="project-meta">{{ card.meta }}</p>
         </article>
       </div>
     </div>
   </section>
 </template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useLocale } from '~/composables/useLocale'
+
+const { t } = useLocale()
+const copy = computed(() => t.value.projects)
+</script>
