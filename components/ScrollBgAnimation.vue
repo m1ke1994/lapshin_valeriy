@@ -30,13 +30,13 @@ const framePath = (idx) => {
 }
 
 const frameCount = framesToUse
-<<<<<<< HEAD
+
 const MOBILE_SLIDE_FRAMES = [14, 629, 818, 929, 1156, 1201]
 const MOBILE_SLIDE_INTERVAL_MS = 5000
 const MOBILE_SLIDE_FADE_MS = 800
-=======
+
 const MOBILE_STEP = 10
->>>>>>> fbf7fc72717542e29560b647b208f7c42bcad78a
+
 const mqMobile =
   typeof window !== 'undefined'
     ? window.matchMedia('(max-width: 768px)')
@@ -47,11 +47,11 @@ const mqMobile =
         addListener: () => {},
         removeListener: () => {},
       }
-<<<<<<< HEAD
+
 const isMobileViewport = () => mqMobile.matches
-=======
+
 const isMobile = () => mqMobile.matches
->>>>>>> fbf7fc72717542e29560b647b208f7c42bcad78a
+
 
 // caches / queues
 const frameCache = new Map() // idx -> ImageBitmap | HTMLImageElement
