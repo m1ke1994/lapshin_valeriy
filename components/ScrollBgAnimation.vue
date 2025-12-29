@@ -30,6 +30,20 @@ const framePath = (idx) => {
 }
 
 const frameCount = framesToUse
+const MOBILE_SLIDE_FRAMES = [14, 629, 818, 929, 1156, 1201]
+const MOBILE_SLIDE_INTERVAL_MS = 5000
+const MOBILE_SLIDE_FADE_MS = 800
+const mqMobile =
+  typeof window !== 'undefined'
+    ? window.matchMedia('(max-width: 768px)')
+    : {
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+      }
+const isMobileViewport = () => mqMobile.matches
 
 // caches / queues
 const frameCache = new Map() // idx -> ImageBitmap | HTMLImageElement
@@ -147,6 +161,11 @@ let badFpsStreak = 0
 let reduceMotion = false
 let isMobile = false
 let isSafari = false
+let mobileSlideshowId = 0
+let mobileSlideIndex = 0
+let mobileBgSnapshot = null
+let mobileSlideEls = []
+let mobileSlideActive = 0
 
 let ctx = null
 let ctxConfigured = false
@@ -193,6 +212,130 @@ const clearStaticBackground = () => {
     doc.style.backgroundImage = prev.htmlBg
     body.style.backgroundImage = prev.bodyBg
   }
+}
+
+const createMobileSlideEl = () => {
+  const el = document.createElement('div')
+  el.setAttribute('aria-hidden', 'true')
+  el.style.position = 'fixed'
+  el.style.inset = '0'
+  el.style.zIndex = '0'
+  el.style.pointerEvents = 'none'
+  el.style.backgroundSize = 'cover'
+  el.style.backgroundRepeat = 'no-repeat'
+  el.style.backgroundPosition = 'center center'
+  el.style.backgroundAttachment = 'fixed'
+  el.style.transition = `opacity ${MOBILE_SLIDE_FADE_MS}ms ease, transform ${MOBILE_SLIDE_FADE_MS}ms ease`
+  el.style.opacity = '0'
+  el.style.transform = 'translateX(0)'
+  return el
+}
+
+const ensureMobileSlideEl = () => {
+  if (mobileSlideEls.length) return mobileSlideEls
+  const el1 = createMobileSlideEl()
+  const el2 = createMobileSlideEl()
+  document.body.appendChild(el1)
+  document.body.appendChild(el2)
+  mobileSlideEls = [el1, el2]
+
+  if (!mobileBgSnapshot) {
+    const doc = document.documentElement
+    const body = document.body
+    mobileBgSnapshot = {
+      htmlBg: doc.style.backgroundImage,
+      bodyBg: body.style.backgroundImage,
+      varBg: doc.style.getPropertyValue('--scroll-bg-image'),
+      htmlSize: doc.style.backgroundSize,
+      bodySize: body.style.backgroundSize,
+      htmlRepeat: doc.style.backgroundRepeat,
+      bodyRepeat: body.style.backgroundRepeat,
+      htmlPos: doc.style.backgroundPosition,
+      bodyPos: body.style.backgroundPosition,
+      htmlAttach: doc.style.backgroundAttachment,
+      bodyAttach: body.style.backgroundAttachment,
+    }
+    cleanupBg = () => {
+      doc.style.setProperty('--scroll-bg-image', mobileBgSnapshot.varBg)
+      doc.style.backgroundImage = mobileBgSnapshot.htmlBg
+      body.style.backgroundImage = mobileBgSnapshot.bodyBg
+      doc.style.backgroundSize = mobileBgSnapshot.htmlSize
+      body.style.backgroundSize = mobileBgSnapshot.bodySize
+      doc.style.backgroundRepeat = mobileBgSnapshot.htmlRepeat
+      body.style.backgroundRepeat = mobileBgSnapshot.bodyRepeat
+      doc.style.backgroundPosition = mobileBgSnapshot.htmlPos
+      body.style.backgroundPosition = mobileBgSnapshot.bodyPos
+      doc.style.backgroundAttachment = mobileBgSnapshot.htmlAttach
+      body.style.backgroundAttachment = mobileBgSnapshot.bodyAttach
+      mobileBgSnapshot = null
+    }
+  }
+
+  return mobileSlideEls
+}
+
+const applyMobileSlideFrame = (index, immediate = false) => {
+  const els = ensureMobileSlideEl()
+  const current = els[mobileSlideActive]
+  const nextIndex = (mobileSlideActive + 1) % els.length
+  const nextEl = els[nextIndex]
+  const clampedIndex = clamp(index, 0, frameCount - 1)
+  const src = framePath(clampedIndex)
+
+  if (immediate) {
+    current.style.transition = 'none'
+    nextEl.style.transition = 'none'
+    current.style.opacity = '0'
+    nextEl.style.opacity = '1'
+    nextEl.style.transform = 'translateX(0)'
+    nextEl.style.backgroundImage = `url(${src})`
+    requestAnimationFrame(() => {
+      current.style.transition = `opacity ${MOBILE_SLIDE_FADE_MS}ms ease, transform ${MOBILE_SLIDE_FADE_MS}ms ease`
+      nextEl.style.transition = `opacity ${MOBILE_SLIDE_FADE_MS}ms ease, transform ${MOBILE_SLIDE_FADE_MS}ms ease`
+    })
+    mobileSlideActive = nextIndex
+    return
+  }
+
+  // prepare next slide
+  nextEl.style.transition = 'none'
+  nextEl.style.opacity = '0'
+  nextEl.style.transform = 'translateX(-12%)'
+  nextEl.style.backgroundImage = `url(${src})`
+
+  // animate
+  requestAnimationFrame(() => {
+    current.style.transition = `opacity ${MOBILE_SLIDE_FADE_MS}ms ease, transform ${MOBILE_SLIDE_FADE_MS}ms ease`
+    nextEl.style.transition = `opacity ${MOBILE_SLIDE_FADE_MS}ms ease, transform ${MOBILE_SLIDE_FADE_MS}ms ease`
+    current.style.opacity = '0'
+    current.style.transform = 'translateX(12%)'
+    nextEl.style.opacity = '1'
+    nextEl.style.transform = 'translateX(0)'
+    mobileSlideActive = nextIndex
+  })
+}
+
+const startMobileSlideshow = () => {
+  if (mobileSlideshowId) return
+  const startIndex = Math.floor(Math.random() * MOBILE_SLIDE_FRAMES.length)
+  mobileSlideIndex = startIndex
+  applyMobileSlideFrame(MOBILE_SLIDE_FRAMES[mobileSlideIndex], true)
+  mobileSlideshowId = window.setInterval(() => {
+    mobileSlideIndex = (mobileSlideIndex + 1) % MOBILE_SLIDE_FRAMES.length
+    applyMobileSlideFrame(MOBILE_SLIDE_FRAMES[mobileSlideIndex])
+  }, MOBILE_SLIDE_INTERVAL_MS)
+}
+
+const stopMobileSlideshow = () => {
+  if (mobileSlideshowId) {
+    clearInterval(mobileSlideshowId)
+    mobileSlideshowId = 0
+  }
+  mobileSlideEls.forEach((el) => {
+    if (el?.parentNode) el.parentNode.removeChild(el)
+  })
+  mobileSlideEls = []
+  mobileSlideActive = 0
 }
 
 const measureScrollRange = () => {
@@ -1174,6 +1317,12 @@ onMounted(() => {
   isMobile = window.matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod/i.test(ua)
   isSafari = /^((?!chrome|android).)*safari/i.test(ua)
   reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const mobileViewport = isMobileViewport()
+
+  if (mobileViewport) {
+    startMobileSlideshow()
+    return
+  }
 
   clearStaticBackground()
   resizeCanvas()
@@ -1204,6 +1353,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   destroyed = true
+  stopMobileSlideshow()
 
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onResize)
