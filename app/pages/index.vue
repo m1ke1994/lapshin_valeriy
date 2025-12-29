@@ -6,12 +6,14 @@
     <ApproachSection />
     <CompetenciesSection />
     <TrustSection />
+    <CertificatesSection />
     <ProjectsSection />
     <ContactsSection />
   </main>
 </template>
 
 <script setup>
+import CertificatesSection from '../../components/sections/CertificatesSection.vue' 
 import ScrollBgAnimation from '../../components/ScrollBgAnimation.vue'
 import HeroSection from '../../components/sections/HeroSection.vue'
 import ValuesSection from '../../components/sections/ValuesSection.vue'
