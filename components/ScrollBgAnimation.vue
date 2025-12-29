@@ -30,6 +30,18 @@ const framePath = (idx) => {
 }
 
 const frameCount = framesToUse
+const MOBILE_STEP = 2
+const mqMobile =
+  typeof window !== 'undefined'
+    ? window.matchMedia('(max-width: 768px)')
+    : {
+        matches: false,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        addListener: () => {},
+        removeListener: () => {},
+      }
+const isMobile = () => mqMobile.matches
 
 // caches / queues
 const frameCache = new Map() // idx -> ImageBitmap | HTMLImageElement
@@ -145,7 +157,7 @@ let goodFpsStreak = 0
 let badFpsStreak = 0
 
 let reduceMotion = false
-let isMobile = false
+let isTouchDevice = false
 let isSafari = false
 
 let ctx = null
@@ -318,7 +330,15 @@ const recordFrameTime = (ms) => {
   return lastAvgFrameMs
 }
 
-const getBaseLimits = () => (isMobile || isSafari ? BASE_LIMITS_MOBILE : BASE_LIMITS_DESKTOP)
+const applyMobileFrameStep = (frameRaw) => {
+  let frameFinal = frameRaw
+  if (isMobile()) {
+    frameFinal = Math.round(frameRaw / MOBILE_STEP) * MOBILE_STEP
+  }
+  return clamp(frameFinal, 0, frameCount - 1)
+}
+
+const getBaseLimits = () => (isTouchDevice || isSafari ? BASE_LIMITS_MOBILE : BASE_LIMITS_DESKTOP)
 
 const getEffectiveLimits = (fastScroll = false) => {
   const base = getBaseLimits()
@@ -329,16 +349,16 @@ const getEffectiveLimits = (fastScroll = false) => {
   if (lowQuality) {
     windowFwd = Math.max(LOW_QUALITY_LIMITS.windowFwd, windowFwd - 6)
     windowBack = Math.max(LOW_QUALITY_LIMITS.windowBack, windowBack - 3)
-    maxConcurrent = isMobile || isSafari ? LOW_QUALITY_LIMITS.concurrentMobile : LOW_QUALITY_LIMITS.concurrentDesktop
+    maxConcurrent = isTouchDevice || isSafari ? LOW_QUALITY_LIMITS.concurrentMobile : LOW_QUALITY_LIMITS.concurrentDesktop
   }
 
   if (reduceMotion) {
     windowFwd = REDUCED_LIMITS.windowFwd
     windowBack = REDUCED_LIMITS.windowBack
-    maxConcurrent = isMobile || isSafari ? REDUCED_LIMITS.concurrentMobile : REDUCED_LIMITS.concurrentDesktop
+    maxConcurrent = isTouchDevice || isSafari ? REDUCED_LIMITS.concurrentMobile : REDUCED_LIMITS.concurrentDesktop
   }
 
-  if (fastScroll && !reduceMotion && !isMobile && !isSafari) {
+  if (fastScroll && !reduceMotion && !isTouchDevice && !isSafari) {
     maxConcurrent = Math.min(8, maxConcurrent + 2)
   }
 
@@ -853,18 +873,21 @@ const tick = () => {
 
   const fast = fastScrollActive
   const drawFloat = fast && stride > 1 ? quantBase : rawFrameFloat
+  const frameToDraw = applyMobileFrameStep(drawFloat)
+  const windowBase = isMobile() ? Math.floor(frameToDraw) : quantBase
 
-  ensureWindow(quantBase, direction, fast)
-  pruneCache(quantBase)
+  ensureWindow(windowBase, direction, fast)
+  pruneCache(windowBase)
 
-  const drew = drawFrame(drawFloat, { fast, stride })
+  const drew = drawFrame(frameToDraw, { fast, stride })
 
   updateQuality(frameMs, progressDelta)
 
   if (wasFast && !fastScrollActive && fastExitStreak >= FAST_EXIT_STREAK) {
+    const recoveryBase = isMobile() ? Math.floor(frameToDraw) : rawBaseIndex
     loadGeneration += 1
-    abortFarLoadsAndClearQueue(rawBaseIndex, direction, false)
-    ensureWindow(rawBaseIndex, direction, false)
+    abortFarLoadsAndClearQueue(recoveryBase, direction, false)
+    ensureWindow(recoveryBase, direction, false)
     pumpQueue()
   }
 
@@ -889,10 +912,11 @@ const renderReducedFrame = () => {
   currentProgress = targetProgress.value
   const mappedFrame = mapProgressToFrame(currentProgress)
   const frameFloat = clamp(mappedFrame, 0, frameCount - 1)
-  const baseIndex = Math.floor(frameFloat)
+  const frameToRender = applyMobileFrameStep(frameFloat)
+  const baseIndex = Math.floor(frameToRender)
   ensureWindow(baseIndex, 1, false)
   pruneCache(baseIndex)
-  drawFrame(frameFloat, { fast: false, stride: 1 })
+  drawFrame(frameToRender, { fast: false, stride: 1 })
 }
 
 const scheduleReducedRender = () => {
@@ -909,6 +933,24 @@ const startRafIfNeeded = () => {
   }
   if (rafId) return
   rafId = window.requestAnimationFrame(tick)
+}
+
+const renderWithMobileStep = () => {
+  if (destroyed) return
+  syncScrollState()
+  currentProgress = targetProgress.value
+  const mappedFrame = mapProgressToFrame(currentProgress)
+  const frameFloat = clamp(mappedFrame, 0, frameCount - 1)
+  const frameToRender = applyMobileFrameStep(frameFloat)
+  const baseIndex = Math.floor(frameToRender)
+  ensureWindow(baseIndex, 1, false)
+  pruneCache(baseIndex)
+  drawFrame(frameToRender, { fast: false, stride: 1 })
+}
+
+const handleMobileModeChange = () => {
+  renderWithMobileStep()
+  if (!reduceMotion) startRafIfNeeded()
 }
 
 const stopRaf = () => {
@@ -939,7 +981,8 @@ const refreshLayout = () => {
   rebuildKeyframes()
   syncScrollState()
   const currentFrame = lastDrawnIndex === -1 ? 0 : lastDrawnIndex + lastDrawnMix
-  drawFrame(currentFrame, { fast: false, stride: 1 })
+  const frameToRender = applyMobileFrameStep(currentFrame)
+  drawFrame(frameToRender, { fast: false, stride: 1 })
   if (!reduceMotion) startRafIfNeeded()
 }
 
@@ -1034,12 +1077,10 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
     stopRaf()
 
     const total = frameCount - 1
-    const fromFrame = clamp(
-      lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix,
-      0,
-      total
+    const fromFrame = applyMobileFrameStep(
+      clamp(lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix, 0, total)
     )
-    const toFrame = clamp(targetFrame, 0, total)
+    const toFrame = applyMobileFrameStep(clamp(targetFrame, 0, total))
     const direction = toFrame >= fromFrame ? 1 : -1
     const startTs = performance.now()
 
@@ -1052,13 +1093,14 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
       const t = clamp((ts - startTs) / durationMs, 0, 1)
       const eased = easeInOutCubic(t)
       const frameFloat = fromFrame + (toFrame - fromFrame) * eased
-      const baseIndex = Math.floor(frameFloat)
+      const frameToRender = applyMobileFrameStep(frameFloat)
+      const baseIndex = Math.floor(frameToRender)
 
       ensureWindow(baseIndex, direction, false)
       pruneCache(baseIndex)
 
       // strict draw: if missing frames, do NOT jump to nearby
-      const drew = drawFrameStrict(frameFloat)
+      const drew = drawFrameStrict(frameToRender)
 
       // if we couldn't draw (frames not ready), keep trying; loader is already hidden,
       // but frames are being fetched; we still resolve at time end.
@@ -1067,7 +1109,7 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
       } else {
         navTweenId = 0
         // final: try to draw exact target once more (best effort)
-        drawFrameStrict(toFrame)
+        drawFrameStrict(applyMobileFrameStep(toFrame))
         resolve(drew)
       }
     }
@@ -1078,8 +1120,9 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
 const handleNavNavigate = async (event) => {
   const detail = event?.detail || {}
   const sectionId = normalizeSectionId(detail.sectionId || detail.hash || '')
-  const targetFrame = resolveNavTargetFrame(sectionId)
-  if (typeof targetFrame !== 'number') return
+  const targetFrameRaw = resolveNavTargetFrame(sectionId)
+  if (typeof targetFrameRaw !== 'number') return
+  const targetFrame = applyMobileFrameStep(targetFrameRaw)
 
   event?.preventDefault?.()
 
@@ -1099,10 +1142,8 @@ const handleNavNavigate = async (event) => {
 
   // reprioritize loaders towards target
   loadGeneration += 1
-  const fromFrameFloat = clamp(
-    lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix,
-    0,
-    frameCount - 1
+  const fromFrameFloat = applyMobileFrameStep(
+    clamp(lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix, 0, frameCount - 1)
   )
   const dir = targetFrame >= fromFrameFloat ? 1 : -1
   abortFarLoadsAndClearQueue(Math.floor(targetFrame), dir, false)
@@ -1171,7 +1212,7 @@ const handleNavNavigate = async (event) => {
 
 onMounted(() => {
   const ua = navigator.userAgent || ''
-  isMobile = window.matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod/i.test(ua)
+  isTouchDevice = window.matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod/i.test(ua)
   isSafari = /^((?!chrome|android).)*safari/i.test(ua)
   reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -1194,6 +1235,9 @@ onMounted(() => {
 
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
+  window.addEventListener('orientationchange', handleMobileModeChange)
+  if (mqMobile?.addEventListener) mqMobile.addEventListener('change', handleMobileModeChange)
+  else if (mqMobile?.addListener) mqMobile.addListener(handleMobileModeChange)
   document.addEventListener('visibilitychange', onVisibilityChange)
 
   // NAV channel
@@ -1207,6 +1251,9 @@ onBeforeUnmount(() => {
 
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onResize)
+  window.removeEventListener('orientationchange', handleMobileModeChange)
+  if (mqMobile?.removeEventListener) mqMobile.removeEventListener('change', handleMobileModeChange)
+  else if (mqMobile?.removeListener) mqMobile.removeListener(handleMobileModeChange)
   document.removeEventListener('visibilitychange', onVisibilityChange)
   window.removeEventListener('scroll-bg:navigate', handleNavNavigate, false)
 
