@@ -71,7 +71,9 @@ h2 {
   margin: 0 0 18px;
   letter-spacing: -0.01em;
   color: var(--heading-color);
-  text-shadow: 0 10px 28px rgba(15, 18, 26, 0.12);
+  text-shadow:
+    0 14px 34px rgba(15, 18, 26, 0.22),
+    0 4px 12px rgba(0, 0, 0, 0.16);
 }
 
 h3 {
