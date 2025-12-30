@@ -157,6 +157,11 @@ a {
   z-index: 1;
 }
 
+.ikb-highlight {
+  color: var(--heading-color);
+  font-weight: 700;
+}
+
 .ikb-field,
 .ikb-field input,
 .ikb-field textarea,

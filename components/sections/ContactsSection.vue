@@ -3,14 +3,14 @@
     <div class="section-inner contact-grid reveal">
       <div class="glass-card contact-card">
         <p class="eyebrow section-title">{{ copy.eyebrow }}</p>
-        <h2>{{ copy.title }}</h2>
+        <h2 v-html="highlight(copy.title)"></h2>
         <p class="lead">
-          {{ copy.lead }}
+          <span v-html="highlight(copy.lead)"></span>
         </p>
       </div>
 
       <div class="glass-card contact-card">
-        <h3 class="section-title">{{ copy.formTitle }}</h3>
+        <h3 class="section-title" v-html="highlight(copy.formTitle)"></h3>
 
         <form class="contact-form" @submit.prevent="submit">
           <label class="field">
@@ -86,9 +86,11 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
 import { useLocale } from '~/composables/useLocale'
+import { useHighlight } from '~/composables/useHighlight'
 
 const { t } = useLocale()
 const copy = computed(() => t.value.contacts)
+const { highlight } = useHighlight()
 
 const form = reactive({
   name: '',

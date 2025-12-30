@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useLocale } from '~/composables/useLocale'
+import { useHighlight } from '~/composables/useHighlight'
 
 type Project = {
   id: string
@@ -14,6 +15,7 @@ type Project = {
 
 const { t, locale } = useLocale()
 const copy = computed(() => t.value.projects)
+const { highlight } = useHighlight()
 const placeholder = '/projects/nophoto.png'
 
 const projects = computed<Project[]>(() => {
@@ -264,8 +266,8 @@ watch(locale, () => resetFilters())
       <div class="section-head section-head--split">
         <div>
           <p class="eyebrow">{{ copy.eyebrow }}</p>
-          <h2>{{ copy.title }}</h2>
-          <p class="lead">{{ copy.lead }}</p>
+          <h2 v-html="highlight(copy.title)"></h2>
+          <p class="lead" v-html="highlight(copy.lead)"></p>
         </div>
       
       </div>

@@ -4,9 +4,9 @@
       <div class="hero-copy glass-card">
         <p class="eyebrow">{{ copy.eyebrow }}</p>
 
-        <h1>{{ copy.title }}</h1>
+        <h1 v-html="highlight(copy.title)"></h1>
 
-        <p class="lead">{{ copy.lead }}</p>
+        <p class="lead" v-html="highlight(copy.lead)"></p>
 
         <div class="hero-actions">
           <a class="btn btn-primary" href="#contacts">{{ copy.ctas.primary }}</a>
@@ -23,8 +23,8 @@
 
       <div class="hero-aside">
         <div v-for="note in copy.notes" :key="note.title" class="glass-card hero-note">
-          <h3>{{ note.title }}</h3>
-          <p>{{ note.body }}</p>
+          <h3 v-html="highlight(note.title)"></h3>
+          <p v-html="highlight(note.body)"></p>
         </div>
       </div>
     </div>
@@ -34,9 +34,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useLocale } from '~/composables/useLocale'
+import { useHighlight } from '~/composables/useHighlight'
 
 const { t } = useLocale()
 const copy = computed(() => t.value.hero)
+const { highlight } = useHighlight()
 
 const isHeroVisible = ref(false)
 
