@@ -108,6 +108,13 @@ onBeforeUnmount(() => {
   --accent-strong: #b88935;
   --accent-rgb: 214, 179, 106;
   --accent-soft: rgba(var(--accent-rgb), 0.16);
+  --field-bg: rgba(255, 255, 255, 0.88);
+  --field-bg-hover: rgba(255, 255, 255, 0.94);
+  --field-border: rgba(var(--text-rgb), 0.18);
+  --field-border-strong: rgba(var(--text-rgb), 0.28);
+  --field-placeholder: rgba(var(--text-rgb), 0.55);
+  --field-disabled: rgba(var(--text-rgb), 0.35);
+  --field-invalid: #d65a5a;
 }
 
 * {
@@ -147,5 +154,80 @@ a {
   color: var(--text);
   position: relative;
   z-index: 1;
+}
+
+.ikb-field,
+.ikb-field input,
+.ikb-field textarea,
+.ikb-field select,
+input.ikb-field,
+textarea.ikb-field,
+select.ikb-field {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--field-border);
+  background: var(--field-bg);
+  color: var(--text);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
+  box-shadow: 0 6px 18px rgba(15, 18, 26, 0.06);
+  appearance: none;
+}
+
+.ikb-field::placeholder,
+input.ikb-field::placeholder,
+textarea.ikb-field::placeholder {
+  color: var(--field-placeholder);
+}
+
+.ikb-field:hover,
+input.ikb-field:hover,
+textarea.ikb-field:hover,
+select.ikb-field:hover {
+  border-color: var(--field-border-strong);
+  background: var(--field-bg-hover);
+}
+
+.ikb-field:focus,
+.ikb-field:focus-visible,
+input.ikb-field:focus,
+input.ikb-field:focus-visible,
+textarea.ikb-field:focus,
+textarea.ikb-field:focus-visible,
+select.ikb-field:focus,
+select.ikb-field:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.75);
+  background: #fff;
+  box-shadow:
+    0 10px 28px rgba(15, 18, 26, 0.12),
+    0 0 0 3px rgba(var(--accent-rgb), 0.2);
+  outline: 2px solid rgba(var(--accent-rgb), 0.18);
+  outline-offset: 1px;
+}
+
+.ikb-field:disabled,
+input.ikb-field:disabled,
+textarea.ikb-field:disabled,
+select.ikb-field:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.65);
+  border-color: rgba(var(--text-rgb), 0.16);
+  color: var(--field-disabled);
+  box-shadow: none;
+}
+
+.ikb-field[aria-invalid='true'],
+input.ikb-field[aria-invalid='true'],
+textarea.ikb-field[aria-invalid='true'],
+select.ikb-field[aria-invalid='true'],
+.ikb-field.is-invalid {
+  border-color: var(--field-invalid);
+  box-shadow: 0 0 0 3px rgba(214, 90, 90, 0.15);
 }
 </style>

@@ -17,7 +17,7 @@
             <span class="field-label">{{ copy.fields.name.label }}</span>
             <input
               v-model.trim="form.name"
-              class="field-input"
+              class="field-input ikb-field"
               type="text"
               name="name"
               autocomplete="name"
@@ -30,7 +30,7 @@
             <span class="field-label">{{ copy.fields.phone.label }}</span>
             <input
               v-model.trim="form.phone"
-              class="field-input"
+              class="field-input ikb-field"
               type="tel"
               name="phone"
               autocomplete="tel"
@@ -45,7 +45,7 @@
               <span class="field-label">{{ copy.fields.date.label }}</span>
               <input
                 v-model="form.date"
-                class="field-input"
+                class="field-input ikb-field"
                 type="date"
                 name="date"
                 :placeholder="copy.fields.date.placeholder"
@@ -57,7 +57,7 @@
               <span class="field-label">{{ copy.fields.time.label }}</span>
               <input
                 v-model="form.time"
-                class="field-input"
+                class="field-input ikb-field"
                 type="time"
                 name="time"
                 :placeholder="copy.fields.time.placeholder"
@@ -135,21 +135,22 @@ function submit() {
 
 .field-label {
   font-size: 12px;
-  opacity: 0.8;
+  opacity: 0.92;
   letter-spacing: 0.02em;
+  color: rgba(var(--text-rgb), 0.9);
   cursor: pointer;
 }
 
 .field-input {
-  width: 100%;
-  padding: 12px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
-  color: inherit;
-  outline: none;
   cursor: pointer;
-  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+  background: var(--field-bg);
+  border: 1px solid var(--field-border);
+  color: var(--text);
+  box-shadow: 0 8px 22px rgba(15, 18, 26, 0.08);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .field-input[type='text'],
@@ -162,16 +163,18 @@ function submit() {
   cursor: text;
 }
 
-.field-input:focus,
-.field-input:focus-visible,
-.field-input:active {
-  border-color: rgba(var(--accent-rgb), 0.75);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18);
+.field:hover .field-input {
+  border-color: var(--field-border-strong);
+  background: var(--field-bg-hover);
 }
 
-.field:hover .field-input {
-  border-color: rgba(var(--accent-rgb), 0.35);
+.field-input:focus,
+.field-input:focus-visible {
+  border-color: rgba(var(--accent-rgb), 0.8);
+  background: #fff;
+  box-shadow:
+    0 10px 28px rgba(15, 18, 26, 0.12),
+    0 0 0 3px rgba(var(--accent-rgb), 0.2);
 }
 
 .field-input::-webkit-calendar-picker-indicator {
