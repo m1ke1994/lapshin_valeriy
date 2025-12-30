@@ -31,6 +31,10 @@ const WINDOW_BACK_MOBILE = 2
 const CONCURRENT_DESKTOP = 2
 const CONCURRENT_MOBILE = 1
 const JUMP_ABORT_THRESHOLD = WINDOW_FWD_DESKTOP * 2
+const DPR_CAP_HIGH = 1.75
+const DPR_CAP_LOW = 1.25
+const IDLE_TIMEOUT_MS = 200
+const PREFETCH_THROTTLE_MS = 100
 
 const anchorConfig = [
   { id: 'top', frameProgress: 0 },
@@ -62,11 +66,18 @@ let destroyed = false
 let scrollRange = 1
 let keyframes = []
 let isMobileDevice = false
+let prefersReducedMotion = false
+let saveDataMode = false
+let lowPowerMode = false
 
 const desiredFrame = ref(0)
 let lastAppliedFrame = -1
 let rafId = 0
 let lastPrefetchCenter = -1
+let lastPrefetchAt = 0
+let lastDesiredChange = 0
+let needsTick = false
+let lastAbortCenter = -1
 
 // caches
 const decoded = new Map() // idx -> ImageBitmap
@@ -80,7 +91,9 @@ let generation = 0
 const resizeCanvas = () => {
   const el = canvas.value
   if (!el) return
-  const dpr = window.devicePixelRatio || 1
+  const baseDpr = window.devicePixelRatio || 1
+  const dprCap = lowPowerMode || saveDataMode || prefersReducedMotion ? DPR_CAP_LOW : DPR_CAP_HIGH
+  const dpr = Math.min(baseDpr, dprCap)
   const width = el.clientWidth || window.innerWidth
   const height = el.clientHeight || window.innerHeight
   const w = Math.floor(width * dpr)
@@ -94,12 +107,30 @@ const resizeCanvas = () => {
   }
 }
 
-const getCacheLimit = () => (isMobileDevice ? CACHE_LIMIT_MOBILE : CACHE_LIMIT_DESKTOP)
-const getConcurrency = () => (isMobileDevice ? CONCURRENT_MOBILE : CONCURRENT_DESKTOP)
-const getWindowConfig = () =>
-  isMobileDevice
+const updateEnvironmentFlags = () => {
+  const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection
+  saveDataMode = !!connection?.saveData
+  prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4
+  const lowRam = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4
+  lowPowerMode = saveDataMode || prefersReducedMotion || lowCpu || lowRam
+  evictIfNeeded()
+}
+
+const getCacheLimit = () => (isMobileDevice || lowPowerMode ? CACHE_LIMIT_MOBILE : CACHE_LIMIT_DESKTOP)
+const getConcurrency = () => Math.max(1, isMobileDevice || lowPowerMode ? CONCURRENT_MOBILE : CONCURRENT_DESKTOP)
+const getWindowConfig = () => {
+  const base = isMobileDevice
     ? { windowFwd: WINDOW_FWD_MOBILE, windowBack: WINDOW_BACK_MOBILE }
     : { windowFwd: WINDOW_FWD_DESKTOP, windowBack: WINDOW_BACK_DESKTOP }
+  if (lowPowerMode || saveDataMode || prefersReducedMotion) {
+    return {
+      windowFwd: Math.max(1, Math.min(base.windowFwd, 4)),
+      windowBack: Math.max(1, Math.min(base.windowBack, 2)),
+    }
+  }
+  return base
+}
 
 const applyFrameStep = (frameRaw) => {
   const step = isMobileDevice ? MOBILE_STEP : FRAME_STEP
@@ -259,20 +290,28 @@ const enqueueLoad = (index, priority = 0) => {
 const ensureFrame = (index, priority = -10) => enqueueLoad(index, priority)
 
 const schedulePrefetch = (center) => {
+  const snappedCenter = clamp(Math.round(center), 0, TOTAL_FRAMES - 1)
+  const now = performance.now()
+  if (snappedCenter === lastPrefetchCenter) return
+  if (now - lastPrefetchAt < PREFETCH_THROTTLE_MS) return
+  lastPrefetchCenter = snappedCenter
+  lastPrefetchAt = now
+
   const { windowFwd, windowBack } = getWindowConfig()
   const step = isMobileDevice ? MOBILE_STEP : FRAME_STEP
   for (let i = step; i <= windowFwd; i += step) {
-    const idx = center + i
+    const idx = snappedCenter + i
     if (idx < TOTAL_FRAMES) enqueueLoad(idx, 5 + i)
   }
   for (let i = step; i <= windowBack; i += step) {
-    const idx = center - i
+    const idx = snappedCenter - i
     if (idx >= 0) enqueueLoad(idx, 5 + i)
   }
 }
 
 const drawFrame = (index) => {
   if (destroyed) return
+  if (lastAppliedFrame === index) return
   const bmp = decoded.get(index)
   const el = canvas.value
   if (!el || !bmp) return
@@ -300,34 +339,49 @@ const drawFrame = (index) => {
   lastAppliedFrame = index
 }
 
-const tick = () => {
+const requestTick = () => {
+  if (destroyed || rafId) return
   rafId = window.requestAnimationFrame(tick)
+}
+
+const tick = () => {
+  rafId = 0
   if (destroyed) return
+  const now = performance.now()
   const targetFrame = applyFrameStep(desiredFrame.value)
-  if (targetFrame === lastAppliedFrame) {
-    schedulePrefetch(targetFrame)
-    return
-  }
+  const externalRequest = needsTick
+  needsTick = false
+  const pendingLoads = activeLoads > 0 || loadQueue.length > 0
+  let shouldContinue = false
 
   const jumpThreshold = (isMobileDevice ? WINDOW_FWD_MOBILE : WINDOW_FWD_DESKTOP) * 2 || JUMP_ABORT_THRESHOLD
-  if (lastPrefetchCenter === -1 || Math.abs(targetFrame - lastPrefetchCenter) > jumpThreshold) {
+  if (lastAbortCenter === -1 || Math.abs(targetFrame - lastAbortCenter) > jumpThreshold) {
     abortAll(targetFrame)
   }
-  lastPrefetchCenter = targetFrame
-
-  ensureFrame(targetFrame, -20)
-    .then((bmp) => {
-      if (!bmp || destroyed) return
-      if (applyFrameStep(desiredFrame.value) !== targetFrame) return
-      drawFrame(targetFrame)
-    })
-    .catch(() => {})
-
-  schedulePrefetch(targetFrame)
+  lastAbortCenter = targetFrame
 
   if (decoded.has(targetFrame)) {
     drawFrame(targetFrame)
+  } else {
+    shouldContinue = true
+    ensureFrame(targetFrame, -20)
+      .then((bmp) => {
+        if (!bmp || destroyed) return
+        if (applyFrameStep(desiredFrame.value) !== targetFrame) return
+        drawFrame(targetFrame)
+        requestTick()
+      })
+      .catch(() => {})
   }
+
+  schedulePrefetch(targetFrame)
+
+  if (externalRequest) shouldContinue = true
+  if (targetFrame !== lastAppliedFrame) shouldContinue = true
+  if (pendingLoads) shouldContinue = true
+  if (now - lastDesiredChange <= IDLE_TIMEOUT_MS) shouldContinue = true
+
+  if (shouldContinue) rafId = window.requestAnimationFrame(tick)
 }
 
 const onScroll = () => {
@@ -335,10 +389,14 @@ const onScroll = () => {
   const scrollTop = window.scrollY || window.pageYOffset || 0
   const ratio = scrollRange ? clamp(scrollTop / scrollRange, 0, 1) : 0
   desiredFrame.value = mapProgressToFrame(ratio)
+  lastDesiredChange = performance.now()
+  needsTick = true
+  requestTick()
 }
 
 const onResize = () => {
   if (destroyed) return
+  updateEnvironmentFlags()
   resizeCanvas()
   rebuildKeyframes()
   onScroll()
@@ -358,7 +416,7 @@ const scrollSectionIntoView = (sectionId) => {
   const offset = (headerEl?.offsetHeight || 80) + 10
   const start = window.scrollY || window.pageYOffset || 0
   const end = target.getBoundingClientRect().top + start - offset
-  window.scrollTo({ top: end, behavior: 'smooth' })
+  window.scrollTo({ top: end, behavior: prefersReducedMotion ? 'auto' : 'smooth' })
 }
 
 const handleNavNavigate = (event) => {
@@ -367,6 +425,9 @@ const handleNavNavigate = (event) => {
   const target = resolveNavTargetFrame(sectionId)
   if (typeof target === 'number') {
     desiredFrame.value = target
+    lastDesiredChange = performance.now()
+    needsTick = true
+    requestTick()
     scrollSectionIntoView(sectionId)
   }
 }
@@ -381,6 +442,7 @@ const clearStaticBackground = () => {
 
 onMounted(() => {
   isMobileDevice = window.matchMedia('(max-width: 768px)').matches
+  updateEnvironmentFlags()
   clearStaticBackground()
   resizeCanvas()
   rebuildKeyframes()
@@ -389,8 +451,6 @@ onMounted(() => {
   ensureFrame(0, -30)
     .then(() => drawFrame(0))
     .catch(() => {})
-
-  if (!rafId) rafId = window.requestAnimationFrame(tick)
 
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
