@@ -73,3 +73,13 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+## Backend (Django)
+
+Backend живёт в `backend/` и поднимает API/CMS для контента, проектов и сертификатов.
+
+- Шаги запуска: `cd backend`, создать venv, `pip install -r requirements.txt`, скопировать `.env.example`, `python manage.py migrate`, `python manage.py createsuperuser`, `python manage.py runserver`.
+- Swagger: `http://localhost:8000/api/docs/`, публичный payload: `/api/public/home/`, проекты: `/api/projects/`, сертификаты: `/api/certificates/`.
+- Настройки CORS/DB/SECRET_KEY смотрите в `backend/.env.example`.
+
+Фронтенд может брать API-базу из `NUXT_PUBLIC_API_BASE_URL` (см. `.env.example` в корне).
