@@ -16,13 +16,7 @@ let revealTargets = []
 let revealStarted = false
 
 useHead({
-  link: [
-    { rel: 'preload', as: 'image', href: '/bg/frame1.webp' },
-    { rel: 'preload', as: 'image', href: '/bg/frame2.webp' },
-    { rel: 'preload', as: 'image', href: '/bg/frame3.webp' },
-    { rel: 'preload', as: 'image', href: '/bg/frame4.webp' },
-    { rel: 'preload', as: 'image', href: '/bg/frame5.webp' },
-  ],
+  link: [{ rel: 'preload', as: 'image', href: '/bg/frame1.webp' }],
 })
 
 const prepareRevealTargets = async () => {
