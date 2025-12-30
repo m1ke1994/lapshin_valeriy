@@ -33,6 +33,8 @@ const SAVEDATA_DAMPING = 0.1
 const JUMP_DIRECT_S = 0.9
 const DEFAULT_SEEK_INTERVAL_MS = 33
 const SAVEDATA_SEEK_INTERVAL_MS = 66
+const SCRUB_FPS = 30
+const FRAME_TIME = 1 / SCRUB_FPS
 
 const anchorConfig = [
   { id: 'top', progress: 0 },
@@ -73,6 +75,7 @@ let duration = 0
 let targetProgress = 0
 let pageHidden = false
 let initialTimeSynced = false
+let lastQuantTime = 0
 
 const measureScrollRange = () => {
   const doc = document.documentElement
@@ -167,19 +170,26 @@ const tick = () => {
   }
 
   const targetTime = clamp(targetProgress, 0, 1) * duration
+  const targetTimeQ = clamp(Math.round(targetTime / FRAME_TIME) * FRAME_TIME, 0, duration)
   const current = video.currentTime || 0
-  const delta = targetTime - current
+  const delta = targetTimeQ - current
   const absDelta = Math.abs(delta)
   const canSeekNow = now - lastSeekAt >= seekInterval
+  const sameFrame = Math.abs(targetTimeQ - lastQuantTime) < FRAME_TIME * 0.5
 
-  if (absDelta > threshold && canSeekNow) {
+  if (absDelta > threshold && canSeekNow && !sameFrame) {
     const shouldJump = absDelta > JUMP_DIRECT_S
-    const nextTime = shouldJump ? targetTime : current + delta * damping
+    const nextTime = shouldJump ? targetTimeQ : current + (targetTimeQ - current) * damping
     video.currentTime = clamp(nextTime, 0, duration)
     lastSeekAt = now
+    lastQuantTime = targetTimeQ
   }
 
   const shouldStop = !hasActivity && absDelta <= threshold
+  if (shouldStop && Math.abs((video.currentTime || 0) - targetTimeQ) > FRAME_TIME * 0.25) {
+    video.currentTime = targetTimeQ
+    lastQuantTime = targetTimeQ
+  }
 
   if (!shouldStop && (!timedOut || absDelta > threshold)) {
     requestTick()
@@ -331,6 +341,8 @@ onBeforeUnmount(() => {
   object-fit: cover;
   pointer-events: none;
   z-index: 0;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .nav-loader {
