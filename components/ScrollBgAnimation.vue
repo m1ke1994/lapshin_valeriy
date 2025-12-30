@@ -1,8 +1,15 @@
 <template>
   <section ref="section" class="scroll-wrapper" aria-hidden="true">
-    <div class="pin">
-      <canvas ref="canvas"></canvas>
-    </div>
+    <video
+      ref="videoEl"
+      class="scroll-video"
+      muted
+      playsinline
+      preload="auto"
+    >
+      <source src="/bg/bg.webm" type="video/webm; codecs=vp9" />
+      <source src="/bg/bg.mp4" type="video/mp4" />
+    </video>
     <div v-if="navLoading" class="nav-loader" role="status" aria-live="polite">
       <div class="nav-loader__spinner"></div>
     </div>
@@ -13,41 +20,27 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 const section = ref(null)
-const canvas = ref(null)
+const videoEl = ref(null)
 const navLoading = ref(false)
 
-const TOTAL_FRAMES = 1202
-const FRAME_STEP = 2
-const MOBILE_STEP = 15
-
-const CACHE_LIMIT_DESKTOP = 32
-const CACHE_LIMIT_MOBILE = 16
-
-const WINDOW_FWD_DESKTOP = 8
-const WINDOW_BACK_DESKTOP = 4
-const WINDOW_FWD_MOBILE = 4
-const WINDOW_BACK_MOBILE = 2
-
-const CONCURRENT_DESKTOP = 2
-const CONCURRENT_MOBILE = 1
-const JUMP_ABORT_THRESHOLD = WINDOW_FWD_DESKTOP * 2
-const DPR_CAP_HIGH = 1.75
-const DPR_CAP_LOW = 1.25
 const IDLE_TIMEOUT_MS = 200
-const PREFETCH_THROTTLE_MS = 100
+const DEFAULT_THRESHOLD = 0.03
+const SAVEDATA_THRESHOLD = 0.07
+const DEFAULT_DAMPING = 0.2
+const SAVEDATA_DAMPING = 0.1
 
 const anchorConfig = [
-  { id: 'top', frameProgress: 0 },
-  { id: 'values', frameProgress: 0.13 },
-  { id: 'approach', frameProgress: 0.27 },
-  { id: 'competencies', frameProgress: 0.52 },
-  { id: 'trust', frameProgress: 0.6 },
-  { id: 'certificates', frameProgress: 0.7 },
-  { id: 'projects', frameProgress: 0.8 },
-  { id: 'contacts', frameProgress: 0.98 },
+  { id: 'top', progress: 0 },
+  { id: 'values', progress: 0.13 },
+  { id: 'approach', progress: 0.27 },
+  { id: 'competencies', progress: 0.52 },
+  { id: 'trust', progress: 0.6 },
+  { id: 'certificates', progress: 0.7 },
+  { id: 'projects', progress: 0.8 },
+  { id: 'contacts', progress: 0.98 },
 ]
 
-const NAV_TO_FRAME = {
+const NAV_TO_PROGRESS = {
   philosophy: 0,
   methodology: 16,
   direction: 32,
@@ -58,85 +51,19 @@ const NAV_TO_FRAME = {
 }
 const NAV_MAX = 118
 
-const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
-const framePath = (idx) => `/bg/frame${idx + 1}.webp`
+const clamp = (v, min = 0, max = 1) => Math.min(max, Math.max(min, v))
 
-let ctx = null
 let destroyed = false
 let scrollRange = 1
 let keyframes = []
-let isMobileDevice = false
+let rafId = 0
+let lastActivity = 0
 let prefersReducedMotion = false
 let saveDataMode = false
-let lowPowerMode = false
-
-const desiredFrame = ref(0)
-let lastAppliedFrame = -1
-let rafId = 0
-let lastPrefetchCenter = -1
-let lastPrefetchAt = 0
-let lastDesiredChange = 0
-let needsTick = false
-let lastAbortCenter = -1
-
-// caches
-const decoded = new Map() // idx -> ImageBitmap
-const cacheOrder = [] // LRU order
-const inFlight = new Map() // idx -> { promise, controller }
-const queued = new Set()
-const loadQueue = [] // { index, priority, resolve, reject, gen }
-let activeLoads = 0
-let generation = 0
-
-const resizeCanvas = () => {
-  const el = canvas.value
-  if (!el) return
-  const baseDpr = window.devicePixelRatio || 1
-  const dprCap = lowPowerMode || saveDataMode || prefersReducedMotion ? DPR_CAP_LOW : DPR_CAP_HIGH
-  const dpr = Math.min(baseDpr, dprCap)
-  const width = el.clientWidth || window.innerWidth
-  const height = el.clientHeight || window.innerHeight
-  const w = Math.floor(width * dpr)
-  const h = Math.floor(height * dpr)
-  if (el.width !== w || el.height !== h) {
-    el.width = w
-    el.height = h
-    el.style.width = `${width}px`
-    el.style.height = `${height}px`
-    ctx = el.getContext('2d')
-  }
-}
-
-const updateEnvironmentFlags = () => {
-  const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection
-  saveDataMode = !!connection?.saveData
-  prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const lowCpu = typeof navigator.hardwareConcurrency === 'number' && navigator.hardwareConcurrency <= 4
-  const lowRam = typeof navigator.deviceMemory === 'number' && navigator.deviceMemory <= 4
-  lowPowerMode = saveDataMode || prefersReducedMotion || lowCpu || lowRam
-  evictIfNeeded()
-}
-
-const getCacheLimit = () => (isMobileDevice || lowPowerMode ? CACHE_LIMIT_MOBILE : CACHE_LIMIT_DESKTOP)
-const getConcurrency = () => Math.max(1, isMobileDevice || lowPowerMode ? CONCURRENT_MOBILE : CONCURRENT_DESKTOP)
-const getWindowConfig = () => {
-  const base = isMobileDevice
-    ? { windowFwd: WINDOW_FWD_MOBILE, windowBack: WINDOW_BACK_MOBILE }
-    : { windowFwd: WINDOW_FWD_DESKTOP, windowBack: WINDOW_BACK_DESKTOP }
-  if (lowPowerMode || saveDataMode || prefersReducedMotion) {
-    return {
-      windowFwd: Math.max(1, Math.min(base.windowFwd, 4)),
-      windowBack: Math.max(1, Math.min(base.windowBack, 2)),
-    }
-  }
-  return base
-}
-
-const applyFrameStep = (frameRaw) => {
-  const step = isMobileDevice ? MOBILE_STEP : FRAME_STEP
-  const snapped = Math.round(frameRaw / step) * step
-  return clamp(snapped, 0, TOTAL_FRAMES - 1)
-}
+let damping = DEFAULT_DAMPING
+let threshold = DEFAULT_THRESHOLD
+let duration = 0
+let targetProgress = 0
 
 const measureScrollRange = () => {
   const doc = document.documentElement
@@ -155,14 +82,14 @@ const rebuildKeyframes = () => {
       if (!el) return null
       const top = (window.scrollY || window.pageYOffset || 0) + el.getBoundingClientRect().top
       const p = clamp(top / maxScroll, 0, 1)
-      const targetFrame = Math.round(clamp(item.frameProgress ?? 0, 0, 1) * (TOTAL_FRAMES - 1))
-      return { p, frame: clamp(targetFrame, 0, TOTAL_FRAMES - 1) }
+      const progress = clamp(item.progress ?? 0, 0, 1)
+      return { p, progress }
     })
     .filter(Boolean)
     .sort((a, b) => a.p - b.p)
 
-  const first = { p: 0, frame: 0 }
-  const last = { p: 1, frame: TOTAL_FRAMES - 1 }
+  const first = { p: 0, progress: 0 }
+  const last = { p: 1, progress: 1 }
 
   if (!anchors.length) {
     keyframes = [first, last]
@@ -174,8 +101,8 @@ const rebuildKeyframes = () => {
   keyframes = anchors
 }
 
-const mapProgressToFrame = (progress) => {
-  if (!keyframes.length) return progress * (TOTAL_FRAMES - 1)
+const mapScrollToProgress = (progress) => {
+  if (!keyframes.length) return clamp(progress, 0, 1)
   const p = clamp(progress, 0, 1)
   let prev = keyframes[0]
   for (let i = 1; i < keyframes.length; i += 1) {
@@ -183,160 +110,19 @@ const mapProgressToFrame = (progress) => {
     if (p <= next.p) {
       const span = Math.max(0.0001, next.p - prev.p)
       const local = clamp((p - prev.p) / span, 0, 1)
-      return prev.frame + (next.frame - prev.frame) * local
+      return prev.progress + (next.progress - prev.progress) * local
     }
     prev = next
   }
-  return keyframes[keyframes.length - 1].frame
+  return keyframes[keyframes.length - 1].progress
 }
 
-const evictIfNeeded = () => {
-  const limit = getCacheLimit()
-  while (cacheOrder.length > limit) {
-    const idx = cacheOrder.shift()
-    if (idx === undefined) break
-    const bmp = decoded.get(idx)
-    if (bmp && typeof bmp.close === 'function') bmp.close()
-    decoded.delete(idx)
-  }
-}
-
-const touchCache = (index, bitmap) => {
-  if (decoded.has(index)) {
-    cacheOrder.splice(cacheOrder.indexOf(index), 1)
-  }
-  decoded.set(index, bitmap)
-  cacheOrder.push(index)
-  evictIfNeeded()
-}
-
-const abortAll = (keepIndex = null) => {
-  for (const [idx, entry] of inFlight.entries()) {
-    if (keepIndex !== null && idx === keepIndex) continue
-    entry.controller?.abort()
-    inFlight.delete(idx)
-  }
-  loadQueue.length = 0
-  queued.clear()
-  activeLoads = 0
-  generation += 1
-}
-
-const startLoadTask = (task) => {
-  const { index, resolve, reject, gen } = task
-  const controller = new AbortController()
-  const promise = (async () => {
-    try {
-      const resp = await fetch(framePath(index), { signal: controller.signal })
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`)
-      const blob = await resp.blob()
-      const bitmap = await createImageBitmap(blob)
-      if (destroyed || gen !== generation) {
-        bitmap?.close?.()
-        return null
-      }
-      touchCache(index, bitmap)
-      return bitmap
-    } finally {
-      activeLoads = Math.max(0, activeLoads - 1)
-      inFlight.delete(index)
-      queued.delete(index)
-      pumpQueue()
-    }
-  })()
-
-  inFlight.set(index, { promise, controller })
-  promise.then(resolve).catch((err) => {
-    if (err?.name === 'AbortError') return resolve(null)
-    reject(err)
-  })
-}
-
-const pumpQueue = () => {
-  if (destroyed) return
-  const concurrentLimit = getConcurrency()
-  if (activeLoads >= concurrentLimit) return
-  if (loadQueue.length > 1) loadQueue.sort((a, b) => a.priority - b.priority)
-  while (activeLoads < concurrentLimit && loadQueue.length) {
-    const next = loadQueue.shift()
-    if (!next) break
-    activeLoads += 1
-    startLoadTask(next)
-  }
-}
-
-const enqueueLoad = (index, priority = 0) => {
-  const idx = clamp(Math.round(index), 0, TOTAL_FRAMES - 1)
-  if (decoded.has(idx)) return Promise.resolve(decoded.get(idx))
-  if (inFlight.has(idx)) return inFlight.get(idx).promise
-  if (queued.has(idx)) {
-    const existing = loadQueue.find((item) => item.index === idx)
-    if (existing) existing.priority = Math.min(existing.priority, priority)
-    return inFlight.get(idx)?.promise || Promise.resolve(null)
-  }
-  let resolveFn
-  let rejectFn
-  const promise = new Promise((resolve, reject) => {
-    resolveFn = resolve
-    rejectFn = reject
-  })
-  loadQueue.push({ index: idx, priority, resolve: resolveFn, reject: rejectFn, gen: generation })
-  queued.add(idx)
-  inFlight.set(idx, { promise, controller: null })
-  pumpQueue()
-  return promise
-}
-
-const ensureFrame = (index, priority = -10) => enqueueLoad(index, priority)
-
-const schedulePrefetch = (center) => {
-  const snappedCenter = clamp(Math.round(center), 0, TOTAL_FRAMES - 1)
-  const now = performance.now()
-  if (snappedCenter === lastPrefetchCenter) return
-  if (now - lastPrefetchAt < PREFETCH_THROTTLE_MS) return
-  lastPrefetchCenter = snappedCenter
-  lastPrefetchAt = now
-
-  const { windowFwd, windowBack } = getWindowConfig()
-  const step = isMobileDevice ? MOBILE_STEP : FRAME_STEP
-  for (let i = step; i <= windowFwd; i += step) {
-    const idx = snappedCenter + i
-    if (idx < TOTAL_FRAMES) enqueueLoad(idx, 5 + i)
-  }
-  for (let i = step; i <= windowBack; i += step) {
-    const idx = snappedCenter - i
-    if (idx >= 0) enqueueLoad(idx, 5 + i)
-  }
-}
-
-const drawFrame = (index) => {
-  if (destroyed) return
-  if (lastAppliedFrame === index) return
-  const bmp = decoded.get(index)
-  const el = canvas.value
-  if (!el || !bmp) return
-  if (!ctx) ctx = el.getContext('2d')
-  if (!ctx) return
-
-  const canvasWidth = el.width || 0
-  const canvasHeight = el.height || 0
-  if (!canvasWidth || !canvasHeight) return
-
-  const imgWidth = bmp.width
-  const imgHeight = bmp.height
-  if (!imgWidth || !imgHeight) return
-
-  const scale = Math.max(canvasWidth / imgWidth, canvasHeight / imgHeight)
-  const drawWidth = imgWidth * scale
-  const drawHeight = imgHeight * scale
-  const offsetX = (canvasWidth - drawWidth) * 0.5
-  const offsetY = (canvasHeight - drawHeight) * 0.5
-
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
-  ctx.globalAlpha = 1
-  ctx.imageSmoothingEnabled = true
-  ctx.drawImage(bmp, offsetX, offsetY, drawWidth, drawHeight)
-  lastAppliedFrame = index
+const updateEnvironmentFlags = () => {
+  const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection
+  saveDataMode = !!connection?.saveData
+  prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  damping = saveDataMode ? SAVEDATA_DAMPING : DEFAULT_DAMPING
+  threshold = saveDataMode ? SAVEDATA_THRESHOLD : DEFAULT_THRESHOLD
 }
 
 const requestTick = () => {
@@ -347,70 +133,65 @@ const requestTick = () => {
 const tick = () => {
   rafId = 0
   if (destroyed) return
+  const video = videoEl.value
+  if (!video) return
+
   const now = performance.now()
-  const targetFrame = applyFrameStep(desiredFrame.value)
-  const externalRequest = needsTick
-  needsTick = false
-  const pendingLoads = activeLoads > 0 || loadQueue.length > 0
-  let shouldContinue = false
+  const idleTime = now - lastActivity
+  const shouldStop = idleTime > IDLE_TIMEOUT_MS
 
-  const jumpThreshold = (isMobileDevice ? WINDOW_FWD_MOBILE : WINDOW_FWD_DESKTOP) * 2 || JUMP_ABORT_THRESHOLD
-  if (lastAbortCenter === -1 || Math.abs(targetFrame - lastAbortCenter) > jumpThreshold) {
-    abortAll(targetFrame)
-  }
-  lastAbortCenter = targetFrame
+  duration = video.duration || duration || 0
 
-  if (decoded.has(targetFrame)) {
-    drawFrame(targetFrame)
-  } else {
-    shouldContinue = true
-    ensureFrame(targetFrame, -20)
-      .then((bmp) => {
-        if (!bmp || destroyed) return
-        if (applyFrameStep(desiredFrame.value) !== targetFrame) return
-        drawFrame(targetFrame)
-        requestTick()
-      })
-      .catch(() => {})
+  if (prefersReducedMotion) {
+    if (duration && video.currentTime !== 0) video.currentTime = 0
+    if (!shouldStop) requestTick()
+    return
   }
 
-  schedulePrefetch(targetFrame)
+  if (!duration) {
+    if (!shouldStop) requestTick()
+    return
+  }
 
-  if (externalRequest) shouldContinue = true
-  if (targetFrame !== lastAppliedFrame) shouldContinue = true
-  if (pendingLoads) shouldContinue = true
-  if (now - lastDesiredChange <= IDLE_TIMEOUT_MS) shouldContinue = true
+  const targetTime = clamp(targetProgress, 0, 1) * duration
+  const current = video.currentTime || 0
+  const delta = targetTime - current
+  const absDelta = Math.abs(delta)
 
-  if (shouldContinue) rafId = window.requestAnimationFrame(tick)
+  if (absDelta > threshold) {
+    const nextTime = current + delta * damping
+    video.currentTime = clamp(nextTime, 0, duration)
+  }
+
+  if (!shouldStop && (absDelta > threshold || idleTime <= IDLE_TIMEOUT_MS)) {
+    requestTick()
+  }
 }
 
 const onScroll = () => {
   if (destroyed) return
   const scrollTop = window.scrollY || window.pageYOffset || 0
   const ratio = scrollRange ? clamp(scrollTop / scrollRange, 0, 1) : 0
-  desiredFrame.value = mapProgressToFrame(ratio)
-  lastDesiredChange = performance.now()
-  needsTick = true
+  targetProgress = mapScrollToProgress(ratio)
+  lastActivity = performance.now()
   requestTick()
 }
 
 const onResize = () => {
   if (destroyed) return
   updateEnvironmentFlags()
-  resizeCanvas()
   rebuildKeyframes()
   onScroll()
 }
 
-const resolveNavTargetFrame = (sectionId) => {
-  const raw = NAV_TO_FRAME[sectionId]
+const resolveNavTargetProgress = (sectionId) => {
+  const raw = NAV_TO_PROGRESS[sectionId]
   if (typeof raw !== 'number' || Number.isNaN(raw)) return null
-  return Math.round((raw / NAV_MAX) * (TOTAL_FRAMES - 1))
+  return clamp(raw / NAV_MAX, 0, 1)
 }
 
 const scrollSectionIntoView = (sectionId) => {
-  const domId = sectionId
-  const target = document.getElementById(domId) || document.querySelector(`#${domId}`)
+  const target = document.getElementById(sectionId) || document.querySelector(`#${sectionId}`)
   if (!target) return
   const headerEl = document.querySelector('.header')
   const offset = (headerEl?.offsetHeight || 80) + 10
@@ -422,11 +203,10 @@ const scrollSectionIntoView = (sectionId) => {
 const handleNavNavigate = (event) => {
   const detail = event?.detail || {}
   const sectionId = (detail.sectionId || detail.hash || '').replace(/^#/, '').trim()
-  const target = resolveNavTargetFrame(sectionId)
+  const target = resolveNavTargetProgress(sectionId)
   if (typeof target === 'number') {
-    desiredFrame.value = target
-    lastDesiredChange = performance.now()
-    needsTick = true
+    targetProgress = target
+    lastActivity = performance.now()
     requestTick()
     scrollSectionIntoView(sectionId)
   }
@@ -440,17 +220,27 @@ const clearStaticBackground = () => {
   body.style.backgroundImage = 'none'
 }
 
+const handleLoadedMetadata = () => {
+  const video = videoEl.value
+  if (!video) return
+  duration = video.duration || duration
+  const startTime = clamp(targetProgress, 0, 1) * (duration || 0)
+  if (Number.isFinite(startTime)) {
+    video.currentTime = startTime
+  }
+}
+
 onMounted(() => {
-  isMobileDevice = window.matchMedia('(max-width: 768px)').matches
   updateEnvironmentFlags()
   clearStaticBackground()
-  resizeCanvas()
   rebuildKeyframes()
   onScroll()
 
-  ensureFrame(0, -30)
-    .then(() => drawFrame(0))
-    .catch(() => {})
+  const video = videoEl.value
+  if (video) {
+    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.play().catch(() => {})
+  }
 
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
@@ -464,12 +254,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', onResize)
   window.removeEventListener('scroll-bg:navigate', handleNavNavigate, false)
 
-  abortAll()
-  for (const bmp of decoded.values()) {
-    if (bmp && typeof bmp.close === 'function') bmp.close()
+  const video = videoEl.value
+  if (video) {
+    video.removeEventListener('loadedmetadata', handleLoadedMetadata)
   }
-  decoded.clear()
-  cacheOrder.length = 0
 })
 </script>
 
@@ -483,20 +271,12 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-.pin {
-  position: static;
-  width: 100%;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.pin canvas {
+.scroll-video {
   position: fixed;
   inset: 0;
   width: 100%;
   height: 100%;
-  display: block;
+  object-fit: cover;
   pointer-events: none;
   z-index: 0;
 }
