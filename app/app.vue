@@ -170,6 +170,8 @@ select.ikb-field {
   border: 1px solid var(--field-border);
   background: var(--field-bg);
   color: var(--text);
+  font-size: 16px;
+  line-height: 1.5;
   outline: none;
   transition:
     border-color 160ms ease,
@@ -230,5 +232,47 @@ select.ikb-field[aria-invalid='true'],
 .ikb-field.is-invalid {
   border-color: var(--field-invalid);
   box-shadow: 0 0 0 3px rgba(214, 90, 90, 0.15);
+}
+
+.ikb-field[type='date'],
+.ikb-field[type='time'],
+input.ikb-field[type='date'],
+input.ikb-field[type='time'] {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ikb-field[type='date']::-webkit-calendar-picker-indicator,
+.ikb-field[type='time']::-webkit-calendar-picker-indicator,
+input.ikb-field[type='date']::-webkit-calendar-picker-indicator,
+input.ikb-field[type='time']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 10px;
+  background-color: rgba(var(--accent-rgb), 0.08);
+  filter: saturate(0.8);
+}
+
+@media (max-width: 720px) {
+  .ikb-field,
+  .ikb-field input,
+  .ikb-field textarea,
+  .ikb-field select,
+  input.ikb-field,
+  textarea.ikb-field,
+  select.ikb-field {
+    padding: 14px 14px;
+    border-radius: 14px;
+    box-shadow: 0 10px 24px rgba(15, 18, 26, 0.12);
+  }
+
+  .ikb-field[type='date'],
+  .ikb-field[type='time'],
+  input.ikb-field[type='date'],
+  input.ikb-field[type='time'] {
+    padding-right: 50px;
+  }
 }
 </style>
