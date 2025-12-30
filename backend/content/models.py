@@ -14,11 +14,26 @@ class CertificateType(models.TextChoices):
 
 
 class ContentBlock(models.Model):
-    key = models.SlugField("Ключ", max_length=120)
-    locale = models.CharField("Локаль", max_length=8, choices=LocaleChoices.choices, default=LocaleChoices.RU)
-    title = models.CharField("Заголовок", max_length=255, blank=True)
-    body = models.TextField("Текст", blank=True)
-    extra = models.JSONField("Дополнительно (JSON)", default=dict, blank=True)
+    key = models.SlugField(
+        "Ключ",
+        max_length=120,
+        help_text="Например: header, hero, values, approach, competencies, trust, projects, contacts, certificates",
+    )
+    locale = models.CharField(
+        "Локаль",
+        max_length=8,
+        choices=LocaleChoices.choices,
+        default=LocaleChoices.RU,
+        help_text="ru или en",
+    )
+    title = models.CharField("Заголовок", max_length=255, blank=True, help_text="Заголовок секции (если есть)")
+    body = models.TextField("Текст/описание", blank=True, help_text="Лид или основной текст секции")
+    extra = models.JSONField(
+        "Дополнительно (JSON)",
+        default=dict,
+        blank=True,
+        help_text="Структура как в translations.ts: списки карточек, labels, actions и т.п.",
+    )
     created_at = models.DateTimeField("Создано", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
 
@@ -34,15 +49,15 @@ class ContentBlock(models.Model):
 
 class ProjectItem(models.Model):
     locale = models.CharField("Локаль", max_length=8, choices=LocaleChoices.choices, default=LocaleChoices.RU)
-    title = models.CharField("Название", max_length=255)
+    title = models.CharField("Название", max_length=255, help_text="Заголовок карточки")
     description = models.TextField("Описание", blank=True)
-    category = models.CharField("Категория", max_length=255, blank=True)
-    stage = models.CharField("Стадия", max_length=255, blank=True)
-    meta = models.CharField("Мета", max_length=255, blank=True)
-    tags = models.JSONField("Теги (JSON список)", default=list, blank=True)
+    category = models.CharField("Категория", max_length=255, blank=True, help_text="Например: отрасль/домен")
+    stage = models.CharField("Стадия", max_length=255, blank=True, help_text="Например: MVP/пилот/серия")
+    meta = models.CharField("Мета", max_length=255, blank=True, help_text="Короткая подпись, если нужна")
+    tags = models.JSONField("Теги (JSON список)", default=list, blank=True, help_text='Пример: ["RS-485", "DALI"]')
     image = models.ImageField("Изображение", upload_to="projects/", blank=True, null=True)
-    order = models.PositiveIntegerField("Порядок", default=0)
-    is_active = models.BooleanField("Активен", default=True)
+    order = models.PositiveIntegerField("Порядок", default=0, help_text="Сортировка по возрастанию")
+    is_active = models.BooleanField("Активен", default=True, help_text="Скрыть/показать на сайте")
     created_at = models.DateTimeField("Создано", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
 
@@ -57,17 +72,18 @@ class ProjectItem(models.Model):
 
 class CertificateItem(models.Model):
     locale = models.CharField("Локаль", max_length=8, choices=LocaleChoices.choices, default=LocaleChoices.RU)
-    title = models.CharField("Название", max_length=255, blank=True)
-    subtitle = models.CharField("Подзаголовок", max_length=255, blank=True)
+    title = models.CharField("Название", max_length=255, blank=True, help_text="Короткий заголовок карточки")
+    subtitle = models.CharField("Подзаголовок", max_length=255, blank=True, help_text="Описание/подпись")
     type = models.CharField(
         "Тип",
         max_length=32,
         choices=CertificateType.choices,
         default=CertificateType.CERTIFICATE,
+        help_text="Определяет бейдж на карточке",
     )
     image = models.ImageField("Изображение", upload_to="certificates/")
-    order = models.PositiveIntegerField("Порядок", default=0)
-    is_active = models.BooleanField("Активен", default=True)
+    order = models.PositiveIntegerField("Порядок", default=0, help_text="Сортировка по возрастанию")
+    is_active = models.BooleanField("Активен", default=True, help_text="Скрыть/показать на сайте")
     created_at = models.DateTimeField("Создано", auto_now_add=True)
     updated_at = models.DateTimeField("Обновлено", auto_now=True)
 

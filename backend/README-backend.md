@@ -45,3 +45,10 @@ python manage.py runserver 0.0.0.0:8000
 - `/api/public/home?locale=ru`
 - `/api/projects/?locale=ru`
 - `/api/certificates/?locale=ru`
+
+## Что писать в админке
+- Текстовые секции: создайте `Content block` с `key` из списка: `header`, `hero`, `values`, `approach`, `competencies`, `trust`, `projects`, `contacts`, `certificates`.  
+  - `title` — заголовок секции, `body` — лид/основной текст.  
+  - `extra` — JSON-структура, повторяющая объекты из `app/content/translations.ts` (карточки, labels, actions). Подробные примеры в `backend/CONTENT_KEYS.md`.
+- Проекты: модель `Projects` (`ProjectItem`). Поля: `locale`, `title`, `description`, `category`, `stage`, `meta`, `tags` (JSON список), `image`, `order`, `is_active`.
+- Сертификаты: модель `Certificates` (`CertificateItem`). Поля: `locale`, `title`, `subtitle`, `type` (Отзыв/Диплом/Сертификат), `image`, `order`, `is_active`.
