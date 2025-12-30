@@ -19,8 +19,8 @@ const section = ref(null)
 const canvas = ref(null)
 
 const totalAvailableFrames = 1202
-const framesToUse = totalAvailableFrames
-const frameStep = 1
+const frameStep = 2
+const framesToUse = Math.ceil(totalAvailableFrames / frameStep)
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v))
 
@@ -35,7 +35,7 @@ const MOBILE_SLIDE_FRAMES = [14, 629, 818, 929, 1156, 1201]
 const MOBILE_SLIDE_INTERVAL_MS = 5000
 const MOBILE_SLIDE_FADE_MS = 800
 
-const MOBILE_STEP = 10
+const MOBILE_STEP = 15
 
 const mqMobile =
   typeof window !== 'undefined'
@@ -92,10 +92,10 @@ const STRIDE_FAST = 4
 const STRIDE_FAST_LOW = 8
 const STRIDE_SLOW_LOW = 2
 
-const BASE_LIMITS_DESKTOP = { concurrent: 4, windowFwd: 18, windowBack: 8 }
-const BASE_LIMITS_MOBILE = { concurrent: 2, windowFwd: 12, windowBack: 6 }
-const LOW_QUALITY_LIMITS = { windowFwd: 10, windowBack: 5, concurrentDesktop: 3, concurrentMobile: 2 }
-const REDUCED_LIMITS = { windowFwd: 6, windowBack: 3, concurrentDesktop: 2, concurrentMobile: 1 }
+const BASE_LIMITS_DESKTOP = { concurrent: 2, windowFwd: 12, windowBack: 6 }
+const BASE_LIMITS_MOBILE = { concurrent: 2, windowFwd: 10, windowBack: 5 }
+const LOW_QUALITY_LIMITS = { windowFwd: 8, windowBack: 4, concurrentDesktop: 2, concurrentMobile: 2 }
+const REDUCED_LIMITS = { windowFwd: 5, windowBack: 3, concurrentDesktop: 2, concurrentMobile: 1 }
 
 // anchors (scroll -> frames mapping)
 const anchorConfig = [
@@ -469,12 +469,10 @@ const recordFrameTime = (ms) => {
   return lastAvgFrameMs
 }
 
-const applyMobileFrameStep = (frameRaw) => {
-  let frameFinal = frameRaw
-  if (isMobile()) {
-    frameFinal = Math.round(frameRaw / MOBILE_STEP) * MOBILE_STEP
-  }
-  return clamp(frameFinal, 0, frameCount - 1)
+const applyFrameStep = (frameRaw) => {
+  const snapped = Math.round(frameRaw)
+  const stepped = isMobile() ? Math.round(snapped / MOBILE_STEP) * MOBILE_STEP : snapped
+  return clamp(stepped, 0, frameCount - 1)
 }
 
 const getBaseLimits = () => (isTouchDevice || isSafari ? BASE_LIMITS_MOBILE : BASE_LIMITS_DESKTOP)
@@ -1014,7 +1012,7 @@ const tick = () => {
 
   const fast = fastScrollActive
   const drawFloat = fast && stride > 1 ? quantBase : rawFrameFloat
-  const frameToDraw = applyMobileFrameStep(drawFloat)
+  const frameToDraw = applyFrameStep(drawFloat)
   const windowBase = isMobile() ? Math.floor(frameToDraw) : quantBase
 
   ensureWindow(windowBase, direction, fast)
@@ -1053,7 +1051,7 @@ const renderReducedFrame = () => {
   currentProgress = targetProgress.value
   const mappedFrame = mapProgressToFrame(currentProgress)
   const frameFloat = clamp(mappedFrame, 0, frameCount - 1)
-  const frameToRender = applyMobileFrameStep(frameFloat)
+  const frameToRender = applyFrameStep(frameFloat)
   const baseIndex = Math.floor(frameToRender)
   ensureWindow(baseIndex, 1, false)
   pruneCache(baseIndex)
@@ -1082,7 +1080,7 @@ const renderWithMobileStep = () => {
   currentProgress = targetProgress.value
   const mappedFrame = mapProgressToFrame(currentProgress)
   const frameFloat = clamp(mappedFrame, 0, frameCount - 1)
-  const frameToRender = applyMobileFrameStep(frameFloat)
+  const frameToRender = applyFrameStep(frameFloat)
   const baseIndex = Math.floor(frameToRender)
   ensureWindow(baseIndex, 1, false)
   pruneCache(baseIndex)
@@ -1122,7 +1120,7 @@ const refreshLayout = () => {
   rebuildKeyframes()
   syncScrollState()
   const currentFrame = lastDrawnIndex === -1 ? 0 : lastDrawnIndex + lastDrawnMix
-  const frameToRender = applyMobileFrameStep(currentFrame)
+  const frameToRender = applyFrameStep(currentFrame)
   drawFrame(frameToRender, { fast: false, stride: 1 })
   if (!reduceMotion) startRafIfNeeded()
 }
@@ -1218,10 +1216,10 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
     stopRaf()
 
     const total = frameCount - 1
-    const fromFrame = applyMobileFrameStep(
+    const fromFrame = applyFrameStep(
       clamp(lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix, 0, total)
     )
-    const toFrame = applyMobileFrameStep(clamp(targetFrame, 0, total))
+    const toFrame = applyFrameStep(clamp(targetFrame, 0, total))
     const direction = toFrame >= fromFrame ? 1 : -1
     const startTs = performance.now()
 
@@ -1234,7 +1232,7 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
       const t = clamp((ts - startTs) / durationMs, 0, 1)
       const eased = easeInOutCubic(t)
       const frameFloat = fromFrame + (toFrame - fromFrame) * eased
-      const frameToRender = applyMobileFrameStep(frameFloat)
+      const frameToRender = applyFrameStep(frameFloat)
       const baseIndex = Math.floor(frameToRender)
 
       ensureWindow(baseIndex, direction, false)
@@ -1250,7 +1248,7 @@ const tweenFrameToNav = (targetFrame, durationMs = NAV_TWEEN_DURATION, currentGe
       } else {
         navTweenId = 0
         // final: try to draw exact target once more (best effort)
-        drawFrameStrict(applyMobileFrameStep(toFrame))
+        drawFrameStrict(applyFrameStep(toFrame))
         resolve(drew)
       }
     }
@@ -1263,7 +1261,7 @@ const handleNavNavigate = async (event) => {
   const sectionId = normalizeSectionId(detail.sectionId || detail.hash || '')
   const targetFrameRaw = resolveNavTargetFrame(sectionId)
   if (typeof targetFrameRaw !== 'number') return
-  const targetFrame = applyMobileFrameStep(targetFrameRaw)
+  const targetFrame = applyFrameStep(targetFrameRaw)
 
   event?.preventDefault?.()
 
@@ -1283,7 +1281,7 @@ const handleNavNavigate = async (event) => {
 
   // reprioritize loaders towards target
   loadGeneration += 1
-  const fromFrameFloat = applyMobileFrameStep(
+  const fromFrameFloat = applyFrameStep(
     clamp(lastDrawnIndex === -1 ? mapProgressToFrame(currentProgress) : lastDrawnIndex + lastDrawnMix, 0, frameCount - 1)
   )
   const dir = targetFrame >= fromFrameFloat ? 1 : -1
@@ -1372,8 +1370,8 @@ onMounted(() => {
   const warmupFrames = isMobile() ? [0, 2, 4] : [0, 1, 2, 3]
   loadFrame(0, { front: true, prio: -80 })
     .then(() => {
-      drawFrame(applyMobileFrameStep(0), { fast: false, stride: 1 })
-      ensureWindow(applyMobileFrameStep(0), 1, false)
+      drawFrame(applyFrameStep(0), { fast: false, stride: 1 })
+      ensureWindow(applyFrameStep(0), 1, false)
       return Promise.all(warmupFrames.map((idx) => loadFrame(idx).catch(() => {})))
     })
     .catch(() => {})
