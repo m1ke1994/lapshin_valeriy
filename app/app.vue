@@ -108,6 +108,7 @@ onBeforeUnmount(() => {
   --accent-strong: #b88935;
   --accent-rgb: 214, 179, 106;
   --accent-soft: rgba(var(--accent-rgb), 0.16);
+  --heading-color: #BB8E3D;
   --field-bg: rgba(255, 255, 255, 0.88);
   --field-bg-hover: rgba(255, 255, 255, 0.94);
   --field-border: rgba(var(--text-rgb), 0.18);
