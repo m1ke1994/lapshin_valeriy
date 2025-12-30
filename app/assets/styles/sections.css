@@ -58,7 +58,7 @@
 
 .eyebrow {
   margin: 0 0 12px;
-  font-size: 11px;
+  font-size: 16px;
   letter-spacing: 0.32em;
   text-transform: uppercase;
   color: rgba(var(--accent-rgb), 0.88);
