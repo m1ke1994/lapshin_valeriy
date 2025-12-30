@@ -105,6 +105,10 @@
         </a>
       </div>
     </transition>
+
+    <div class="scroll-progress" aria-hidden="true">
+      <span class="scroll-progress__bar" :style="{ width: `${scrollProgress * 100}%` }"></span>
+    </div>
   </header>
 </template>
 
@@ -120,6 +124,9 @@ const navItems = computed(() => navTargets.map((href, index) => ({ href, label: 
 
 const isMenuOpen = ref(false)
 const activeHash = ref('')
+const scrollProgress = ref(0)
+
+const clamp = (v: number, min = 0, max = 1) => Math.min(max, Math.max(min, v))
 
 const changeLocale = (value: Locale) => {
   if (locale.value === value) return
@@ -231,17 +238,29 @@ const onKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') closeMenu()
 }
 
+const updateScrollProgress = () => {
+  const doc = document.documentElement
+  const body = document.body
+  const scrollTop = window.scrollY || window.pageYOffset || 0
+  const scrollHeight = Math.max(doc.scrollHeight, body.scrollHeight) - window.innerHeight
+  const ratio = scrollHeight > 0 ? scrollTop / scrollHeight : 0
+  scrollProgress.value = clamp(ratio)
+}
+
 onMounted(() => {
   if (typeof window === 'undefined') return
   setupActiveSectionObserver()
   window.addEventListener('resize', onResize, { passive: true })
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('scroll', updateScrollProgress, { passive: true })
+  updateScrollProgress()
 })
 
 onBeforeUnmount(() => {
   if (observer) observer.disconnect()
   window.removeEventListener('resize', onResize)
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('scroll', updateScrollProgress)
   clearTimeout(resizeTimer)
 })
 </script>
@@ -708,5 +727,23 @@ onBeforeUnmount(() => {
   .locale-btn {
     transition: none !important;
   }
+}
+
+.scroll-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: rgba(223, 196, 140, 0.2);
+  overflow: hidden;
+}
+
+.scroll-progress__bar {
+  display: block;
+  height: 100%;
+  width: 0%;
+  background: #DFC48C;
+  transition: width 120ms linear;
 }
 </style>
