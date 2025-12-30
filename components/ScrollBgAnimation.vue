@@ -6,6 +6,8 @@
       muted
       playsinline
       preload="auto"
+      disablePictureInPicture
+      controlslist="nodownload noremoteplayback noplaybackrate"
     >
       <source src="/bg/bg.webm" type="video/webm; codecs=vp9" />
       <source src="/bg/bg.mp4" type="video/mp4" />
@@ -25,9 +27,12 @@ const navLoading = ref(false)
 
 const IDLE_TIMEOUT_MS = 200
 const DEFAULT_THRESHOLD = 0.03
-const SAVEDATA_THRESHOLD = 0.07
+const SAVEDATA_THRESHOLD = 0.09
 const DEFAULT_DAMPING = 0.2
 const SAVEDATA_DAMPING = 0.1
+const JUMP_DIRECT_S = 0.9
+const DEFAULT_SEEK_INTERVAL_MS = 33
+const SAVEDATA_SEEK_INTERVAL_MS = 66
 
 const anchorConfig = [
   { id: 'top', progress: 0 },
@@ -58,12 +63,16 @@ let scrollRange = 1
 let keyframes = []
 let rafId = 0
 let lastActivity = 0
+let lastSeekAt = 0
 let prefersReducedMotion = false
 let saveDataMode = false
 let damping = DEFAULT_DAMPING
 let threshold = DEFAULT_THRESHOLD
+let seekInterval = DEFAULT_SEEK_INTERVAL_MS
 let duration = 0
 let targetProgress = 0
+let pageHidden = false
+let initialTimeSynced = false
 
 const measureScrollRange = () => {
   const doc = document.documentElement
@@ -119,37 +128,41 @@ const mapScrollToProgress = (progress) => {
 
 const updateEnvironmentFlags = () => {
   const connection = navigator.connection || navigator.webkitConnection || navigator.mozConnection
-  saveDataMode = !!connection?.saveData
+  const effectiveType = String(connection?.effectiveType || '').toLowerCase()
+  const isSlowConnection = effectiveType === '2g' || effectiveType === 'slow-2g' || effectiveType === '3g'
+  saveDataMode = !!connection?.saveData || isSlowConnection
   prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   damping = saveDataMode ? SAVEDATA_DAMPING : DEFAULT_DAMPING
   threshold = saveDataMode ? SAVEDATA_THRESHOLD : DEFAULT_THRESHOLD
+  seekInterval = saveDataMode ? SAVEDATA_SEEK_INTERVAL_MS : DEFAULT_SEEK_INTERVAL_MS
 }
 
 const requestTick = () => {
-  if (destroyed || rafId) return
+  if (destroyed || pageHidden || rafId) return
   rafId = window.requestAnimationFrame(tick)
 }
 
 const tick = () => {
   rafId = 0
-  if (destroyed) return
+  if (destroyed || pageHidden) return
   const video = videoEl.value
   if (!video) return
 
   const now = performance.now()
   const idleTime = now - lastActivity
-  const shouldStop = idleTime > IDLE_TIMEOUT_MS
+  const hasActivity = idleTime <= IDLE_TIMEOUT_MS
+  const timedOut = idleTime > IDLE_TIMEOUT_MS
 
   duration = video.duration || duration || 0
 
   if (prefersReducedMotion) {
     if (duration && video.currentTime !== 0) video.currentTime = 0
-    if (!shouldStop) requestTick()
+    if (hasActivity) requestTick()
     return
   }
 
   if (!duration) {
-    if (!shouldStop) requestTick()
+    if (hasActivity) requestTick()
     return
   }
 
@@ -157,13 +170,18 @@ const tick = () => {
   const current = video.currentTime || 0
   const delta = targetTime - current
   const absDelta = Math.abs(delta)
+  const canSeekNow = now - lastSeekAt >= seekInterval
 
-  if (absDelta > threshold) {
-    const nextTime = current + delta * damping
+  if (absDelta > threshold && canSeekNow) {
+    const shouldJump = absDelta > JUMP_DIRECT_S
+    const nextTime = shouldJump ? targetTime : current + delta * damping
     video.currentTime = clamp(nextTime, 0, duration)
+    lastSeekAt = now
   }
 
-  if (!shouldStop && (absDelta > threshold || idleTime <= IDLE_TIMEOUT_MS)) {
+  const shouldStop = !hasActivity && absDelta <= threshold
+
+  if (!shouldStop && (!timedOut || absDelta > threshold)) {
     requestTick()
   }
 }
@@ -173,6 +191,7 @@ const onScroll = () => {
   const scrollTop = window.scrollY || window.pageYOffset || 0
   const ratio = scrollRange ? clamp(scrollTop / scrollRange, 0, 1) : 0
   targetProgress = mapScrollToProgress(ratio)
+  if (pageHidden) return
   lastActivity = performance.now()
   requestTick()
 }
@@ -220,17 +239,44 @@ const clearStaticBackground = () => {
   body.style.backgroundImage = 'none'
 }
 
-const handleLoadedMetadata = () => {
+const syncInitialTime = () => {
+  if (initialTimeSynced) return
   const video = videoEl.value
   if (!video) return
   duration = video.duration || duration
+  if (!duration) return
   const startTime = clamp(targetProgress, 0, 1) * (duration || 0)
   if (Number.isFinite(startTime)) {
-    video.currentTime = startTime
+    if (Math.abs((video.currentTime || 0) - startTime) > 0.001) {
+      video.currentTime = startTime
+      lastSeekAt = performance.now()
+    }
+    initialTimeSynced = true
   }
 }
 
+const handleVisibilityChange = () => {
+  pageHidden = document.hidden
+  if (pageHidden) {
+    if (rafId) {
+      window.cancelAnimationFrame(rafId)
+      rafId = 0
+    }
+    return
+  }
+  updateEnvironmentFlags()
+  rebuildKeyframes()
+  onScroll()
+  syncInitialTime()
+  requestTick()
+}
+
+const handleVideoReady = () => {
+  syncInitialTime()
+}
+
 onMounted(() => {
+  pageHidden = document.hidden
   updateEnvironmentFlags()
   clearStaticBackground()
   rebuildKeyframes()
@@ -238,13 +284,16 @@ onMounted(() => {
 
   const video = videoEl.value
   if (video) {
-    video.addEventListener('loadedmetadata', handleLoadedMetadata)
+    video.addEventListener('loadedmetadata', handleVideoReady)
+    video.addEventListener('loadeddata', handleVideoReady)
+    video.addEventListener('canplay', handleVideoReady)
     video.play().catch(() => {})
   }
 
   window.addEventListener('scroll', onScroll, { passive: true })
   window.addEventListener('resize', onResize, { passive: true })
   window.addEventListener('scroll-bg:navigate', handleNavNavigate, false)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onBeforeUnmount(() => {
@@ -253,10 +302,13 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onScroll)
   window.removeEventListener('resize', onResize)
   window.removeEventListener('scroll-bg:navigate', handleNavNavigate, false)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 
   const video = videoEl.value
   if (video) {
-    video.removeEventListener('loadedmetadata', handleLoadedMetadata)
+    video.removeEventListener('loadedmetadata', handleVideoReady)
+    video.removeEventListener('loadeddata', handleVideoReady)
+    video.removeEventListener('canplay', handleVideoReady)
   }
 })
 </script>
