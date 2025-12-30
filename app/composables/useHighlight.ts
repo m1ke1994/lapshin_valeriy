@@ -6,76 +6,68 @@ const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$
 export const useHighlight = () => {
   const { locale } = useLocale()
 
-  const keywords = computed(() =>
-    locale.value === 'ru'
-      ? [
-          'NDA',
-          'R&D',
-          'инженерия',
-          'инженерные',
-          'инженерный',
-          'продукт',
-          'продукты',
-          'Проектируем',
-          'проектирование',
-          'проекта',
-          'продукты',
-          'система',
-          'системы',
-          'прототипы',
-          'системный',
-          'серия',
-          'серийный',
-          'серийные',
-          'прототип',
-          'прототипы',
-          'качество',
-          'качественный',
-          'конфиденциальность',
-          'конфиденциальный',
-          'безопасность',
-          'безопасный',
-          'консультация',
-          'консультации',
-          'проект',
-          'проекты',
-          'прототипы',
-          'Предсерийные',
-          'кибербезопасность',
-          'точные механизмы',
-          'прошивки',
-          'встраиваемые системы',
-        ]
-      : [
-          'NDA',
-          'R&D',
-          'engineering',
-          'engineered',
-          'engineers',
-          'product',
-          'products',
-          'system',
-          'systems',
-          'prototype',
-          'prototypes',
-          'series',
-          'serial',
-          'quality',
-          'confidential',
-          'confidentiality',
-          'safety',
-          'secure',
-          'consultation',
-          'consult',
-          'project',
-          'projects',
-        ]
-  )
+  const keywords = computed(() => {
+    const ru = [
+      'NDA',
+      'R&D',
+      'инженерия',
+      'инженерный',
+      'инженерные',
+      'продукт',
+      'продукты',
+      'продукта',
+      'система',
+      'системы',
+      'системный',
+      'серия',
+      'серийный',
+      'серийные',
+      'прототип',
+      'прототипы',
+      'качество',
+      'качественный',
+      'конфиденциальность',
+      'конфиденциальный',
+      'безопасность',
+      'безопасный',
+      'консультация',
+      'консультации',
+      'проект',
+      'проекты',
+    ]
+    const en = [
+      'NDA',
+      'R&D',
+      'engineering',
+      'engineered',
+      'engineer',
+      'engineers',
+      'product',
+      'products',
+      'system',
+      'systems',
+      'prototype',
+      'prototypes',
+      'series',
+      'serial',
+      'quality',
+      'confidential',
+      'confidentiality',
+      'safety',
+      'secure',
+      'consultation',
+      'consult',
+      'project',
+      'projects',
+    ]
+    const base = locale.value === 'ru' ? ru : en
+    return Array.from(new Set(base)).sort((a, b) => b.length - a.length)
+  })
 
   const regex = computed(() => {
     const words = keywords.value.filter(Boolean).map(escapeRegex)
     if (!words.length) return null
-    return new RegExp(`(${words.join('|')})`, 'gi')
+    return new RegExp(`(?<![\\p{L}\\p{N}])(${words.join('|')})(?![\\p{L}\\p{N}])`, 'giu')
   })
 
   const highlight = (text: string) => {
