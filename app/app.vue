@@ -247,12 +247,6 @@ input.ikb-field[type='time'] {
   appearance: none;
   padding-right: 48px;
   font-variant-numeric: tabular-nums;
-  background-image:
-    radial-gradient(circle at 80% 50%, rgba(var(--accent-rgb), 0.16) 0%, rgba(var(--accent-rgb), 0.08) 45%, rgba(var(--accent-rgb), 0) 65%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82));
-  background-repeat: no-repeat;
-  background-size: 48px 48px, 100% 100%;
-  background-position: right 8px center, center;
   min-height: 52px;
 }
 
@@ -264,8 +258,8 @@ input.ikb-field[type='time']::-webkit-calendar-picker-indicator {
   padding: 8px;
   margin-right: 4px;
   border-radius: 12px;
-  background-color: rgba(var(--accent-rgb), 0.12);
-  filter: saturate(0.9);
+  background-color: transparent;
+  filter: none;
 }
 
 .ikb-field[type='date']::-webkit-datetime-edit,
