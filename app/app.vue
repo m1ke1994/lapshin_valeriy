@@ -165,7 +165,7 @@ input.ikb-field,
 textarea.ikb-field,
 select.ikb-field {
   width: 100%;
-  padding: 12px 12px;
+  padding: 14px 14px;
   border-radius: 12px;
   border: 1px solid var(--field-border);
   background: var(--field-bg);
@@ -178,7 +178,7 @@ select.ikb-field {
     background 160ms ease,
     box-shadow 160ms ease,
     color 160ms ease;
-  box-shadow: 0 6px 18px rgba(15, 18, 26, 0.06);
+  box-shadow: 0 8px 22px rgba(15, 18, 26, 0.08);
   appearance: none;
 }
 
@@ -240,8 +240,15 @@ input.ikb-field[type='date'],
 input.ikb-field[type='time'] {
   -webkit-appearance: none;
   appearance: none;
-  padding-right: 44px;
+  padding-right: 48px;
   font-variant-numeric: tabular-nums;
+  background-image:
+    radial-gradient(circle at 80% 50%, rgba(var(--accent-rgb), 0.16) 0%, rgba(var(--accent-rgb), 0.08) 45%, rgba(var(--accent-rgb), 0) 65%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82));
+  background-repeat: no-repeat;
+  background-size: 48px 48px, 100% 100%;
+  background-position: right 8px center, center;
+  min-height: 52px;
 }
 
 .ikb-field[type='date']::-webkit-calendar-picker-indicator,
@@ -249,10 +256,22 @@ input.ikb-field[type='time'] {
 input.ikb-field[type='date']::-webkit-calendar-picker-indicator,
 input.ikb-field[type='time']::-webkit-calendar-picker-indicator {
   cursor: pointer;
-  padding: 6px;
-  border-radius: 10px;
-  background-color: rgba(var(--accent-rgb), 0.08);
-  filter: saturate(0.8);
+  padding: 8px;
+  margin-right: 4px;
+  border-radius: 12px;
+  background-color: rgba(var(--accent-rgb), 0.12);
+  filter: saturate(0.9);
+}
+
+.ikb-field[type='date']::-webkit-datetime-edit,
+.ikb-field[type='time']::-webkit-datetime-edit {
+  padding: 2px 0;
+  color: var(--text);
+}
+
+.ikb-field[type='date']::-webkit-datetime-edit-fields-wrapper,
+.ikb-field[type='time']::-webkit-datetime-edit-fields-wrapper {
+  letter-spacing: 0.04em;
 }
 
 @media (max-width: 720px) {
@@ -263,16 +282,17 @@ input.ikb-field[type='time']::-webkit-calendar-picker-indicator {
   input.ikb-field,
   textarea.ikb-field,
   select.ikb-field {
-    padding: 14px 14px;
+    padding: 16px 16px;
     border-radius: 14px;
-    box-shadow: 0 10px 24px rgba(15, 18, 26, 0.12);
+    box-shadow: 0 12px 26px rgba(15, 18, 26, 0.12);
   }
 
   .ikb-field[type='date'],
   .ikb-field[type='time'],
   input.ikb-field[type='date'],
   input.ikb-field[type='time'] {
-    padding-right: 50px;
+    padding-right: 54px;
+    min-height: 56px;
   }
 }
 </style>
