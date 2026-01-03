@@ -79,15 +79,23 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 import type { DocType } from '~/content/translations'
 
-const { t } = useLocale()
-const copy = computed(() => t.value.certificates)
-const items = computed(() => copy.value.items)
+type CertificatesCopy = (typeof import('~/content/translations').translations)['ru']['certificates']
+
+const { copy: content, t } = useContent()
+const copy = computed<CertificatesCopy>(() => (content.value.certificates || t('certificates')) as CertificatesCopy)
+
+const items = computed(() =>
+  (copy.value.items || []).map((item: any) => ({
+    ...item,
+    src: item.image_url || item.src || item.image,
+  }))
+)
 
 function typeLabel(type: DocType) {
-  return copy.value.typeLabels[type] || type
+  return (copy.value.typeLabels || copy.value.type_labels || {})[type] || type
 }
 
 const isOpen = ref(false)

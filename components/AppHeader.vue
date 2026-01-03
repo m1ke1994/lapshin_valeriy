@@ -1,6 +1,6 @@
 <template>
   <header class="header" :class="{ 'is-menu-open': isMenuOpen }">
-    <nav class="nav" aria-label="Primary">
+    <nav class="nav" :aria-label="headerCopy.menuTitle">
       <NuxtLink to="/" class="logo" @click.prevent="scrollToHash('#top')">
         <span class="logo-mark">IKB</span>
         <span class="logo-meta">
@@ -9,7 +9,7 @@
         </span>
       </NuxtLink>
 
-      <div class="links" role="navigation" aria-label="Sections">
+      <div class="links" role="navigation" :aria-label="headerCopy.menuTitle">
         <a
           v-for="item in navItems"
           :key="item.href"
@@ -82,7 +82,7 @@
         <div class="mobile-top">
           <div class="mobile-title">{{ headerCopy.menuTitle }}</div>
           <button class="mobile-close" type="button" :aria-label="headerCopy.menuClose" @click="closeMenu">
-            ×
+            {{ headerCopy.menuClose }}
           </button>
         </div>
 
@@ -110,12 +110,14 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 import type { Locale } from '~/content/translations'
 
+type HeaderCopy = (typeof import('~/content/translations').translations)['ru']['header']
+
 const navTargets = ['#values', '#approach', '#competencies', '#trust', '#projects', '#contacts']
-const { locale, setLocale, t } = useLocale()
-const headerCopy = computed(() => t.value.header)
+const { locale, setLocale, t } = useContent()
+const headerCopy = computed<HeaderCopy>(() => t('header') as HeaderCopy)
 const navItems = computed(() => navTargets.map((href, index) => ({ href, label: headerCopy.value.nav[index] || href })))
 
 const isMenuOpen = ref(false)

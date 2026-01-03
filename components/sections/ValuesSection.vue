@@ -18,8 +18,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 
-const { t } = useLocale()
-const copy = computed(() => t.value.values)
+type ValuesCopy = (typeof import('~/content/translations').translations)['ru']['values']
+
+const { t } = useContent()
+const copy = computed<ValuesCopy>(() => t('values') as ValuesCopy)
 </script>

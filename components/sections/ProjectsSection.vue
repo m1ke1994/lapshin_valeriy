@@ -1,240 +1,47 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 
 type Project = {
-  id: string
+  id: string | number
   title: string
   description: string
   category: string
   stage: string
   tags?: string[]
-  image: string
+  image?: string
+  image_url?: string
 }
 
-const { t, locale } = useLocale()
-const copy = computed(() => t.value.projects)
+type ProjectsCopy = (typeof import('~/content/translations').translations)['ru']['projects']
+
 const placeholder = '/projects/nophoto.png'
+const { copy: content, locale, t } = useContent()
+const copy = computed<ProjectsCopy>(() => (content.value.projects || t('projects')) as ProjectsCopy)
 
 const projects = computed<Project[]>(() => {
-  const image = placeholder
-  return [
-    {
-      id: 'udot-v1',
-      title: '«УДОТ» v.1',
-      description:
-        'Свободно программируемое устройство: обработка входных цифровых и аналоговых сигналов, управление силовой нагрузкой, периферийный модуль связи (RS-485, DALI), питание 9–230 В.',
-      category: 'Устройства управления',
-      stage: 'Прототип',
-      tags: ['RS-485', 'DALI'],
-      image,
-    },
-    {
-      id: 'udot-v2',
-      title: '«УДОТ» v.2',
-      description:
-        'Управление электромагнитными клапанами гидравлических распределителей спецтехники. Входы: цифровые и аналоговые, связь RS-485, питание 9–40 В.',
-      category: 'Устройства управления',
-      stage: 'Прототип',
-      tags: ['RS-485', 'Гидравлика'],
-      image,
-    },
-    {
-      id: 'mobius',
-      title: '«МЁБИУС»',
-      description:
-        'Ёмкостное бесконтактное управление освещением или другой нагрузкой, возможна скрытая установка за отделкой. Патент RU68221.',
-      category: 'Свет',
-      stage: 'MVP',
-      image,
-    },
-    {
-      id: 'avis',
-      title: '«АВИС»',
-      description: 'Блок управления приводом ячейки КРУ(Э).',
-      category: 'Инфраструктура',
-      stage: 'Макет',
-      image,
-    },
-    {
-      id: 'disconnector',
-      title: 'Блок управления разъединителем',
-      description:
-        'Автономный блок для отключения/включения нагрузки в бестоковую паузу (АПВ) с дистанционным управлением.',
-      category: 'Устройства управления',
-      stage: 'Концепт',
-      image,
-    },
-    {
-      id: 'typec',
-      title: '«Конвертор Type-C»',
-      description: 'Преобразователь USB Type-C в интерфейсы RS-485, RS-232 и др.',
-      category: 'Инфраструктура',
-      stage: 'Концепт',
-      tags: ['USB-C', 'RS-485', 'RS-232'],
-      image,
-    },
-    {
-      id: 'mobile-electricity',
-      title: '«Мобильное электричество»',
-      description:
-        'Прицеп с комплектом оборудования для длительной генерации электроэнергии в полевых условиях.',
-      category: 'Автономность',
-      stage: 'MVP',
-      image,
-    },
-    {
-      id: 'autonomous-village',
-      title: '«Автономный посёлок»',
-      description:
-        'Оборудование для коттеджей с объединением в локальную сеть; эффективно от 50 домов.',
-      category: 'Автономность',
-      stage: 'Концепт',
-      image,
-    },
-    {
-      id: 'interos',
-      title: '«ИнтеРОС»',
-      description:
-        'Децентрализованная модульная система для умного дома с адаптацией под привычки пользователя.',
-      category: 'Инфраструктура',
-      stage: 'MVP',
-      image,
-    },
-    {
-      id: 'no-switches',
-      title: '«Свет без выключателей»',
-      description:
-        'Полная автоматика освещения и вентиляции с интеллектуальной подстройкой под объект.',
-      category: 'Свет',
-      stage: 'Прототип',
-      image,
-    },
-    {
-      id: 'light-wave',
-      title: '«Световая волна»',
-      description: 'Освещение протяжённых участков с управляемыми сценариями.',
-      category: 'Свет',
-      stage: 'MVP',
-      image,
-    },
-    {
-      id: 'house-no-electricity',
-      title: '«Дом без электричества»',
-      description:
-        'Автономная солнечная установка; успешно работает с 2012 года в средней полосе России.',
-      category: 'Автономность',
-      stage: 'MVP',
-      tags: ['Солнечная генерация'],
-      image,
-    },
-    {
-      id: 'underwater-pager',
-      title: '«Подводный пейджер»',
-      description:
-        'Носимое устройство для быстрого поиска подводников в аварийной ситуации или обмена сообщениями под водой.',
-      category: 'Инфраструктура',
-      stage: 'Макет',
-      image,
-    },
-    {
-      id: 'sinus',
-      title: '«СИНУС»',
-      description:
-        'Диммируемая LED-лампа/светильник для стандартного патрона или самостоятельного монтажа.',
-      category: 'Свет',
-      stage: 'Прототип',
-      image,
-    },
-    {
-      id: 'divo',
-      title: '«ДиВО»',
-      description: 'Дистанционное управление подсветкой рекламных конструкций.',
-      category: 'Свет',
-      stage: 'Прототип',
-      image,
-    },
-    {
-      id: 'emotional-light',
-      title: '«Эмоциональное освещение»',
-      description:
-        'Управление режимами освещения и температуры по эмоциям (негативные/нейтральные/позитивные) без ИИ.',
-      category: 'Свет',
-      stage: 'Концепт',
-      image,
-    },
-    {
-      id: 'mobile-office',
-      title: '«Мобильный офис»',
-      description: 'Вагон-прицеп для длительного автономного проживания или работы.',
-      category: 'Автономность',
-      stage: 'Концепт',
-      image,
-    },
-    {
-      id: 'starwire',
-      title: '«StarWire»',
-      description:
-        'Безопасный удлинитель: контроль температуры контактов, типа нагрузки, отключение забытого прибора.',
-      category: 'Инфраструктура',
-      stage: 'Прототип',
-      image,
-    },
-    {
-      id: 'birch-lamp',
-      title: '«Birch-Lamp»',
-      description:
-        'Декоративный светильник с сенсорным управлением, имитацией пламени и возможностью «задуть».',
-      category: 'Свет',
-      stage: 'MVP',
-      image,
-    },
-    {
-      id: 'million-lamp',
-      title: '«Million Lamp»',
-      description:
-        'Подвесной светильник из 1400 светодиодов с управлением любым ИК-пультом.',
-      category: 'Свет',
-      stage: 'MVP',
-      image,
-    },
-    {
-      id: 'tumbler',
-      title: '«ТУМБЛЕР»',
-      description: 'Открытая АСУ ТП.',
-      category: 'Устройства управления',
-      stage: 'Концепт',
-      image,
-    },
-  ]
+  const list = (copy.value as any).items ?? copy.value.cards ?? []
+  return list.map((p: any) => ({
+    ...p,
+    image: p.image_url || p.image || placeholder,
+  }))
 })
 
-const defaultCategory = 'Устройства управления'
+const defaultCategory = 'all'
 const query = ref('')
 const activeCategory = ref<string>(defaultCategory)
-const activeStage = ref<string>('all')
+const activeStage = ref<string>(defaultCategory)
 
-const categories = computed(() => ['all', ...new Set(projects.value.map((p) => p.category))])
-const stages = computed(() => ['all', ...new Set(projects.value.map((p) => p.stage))])
+const categories = computed(() => [defaultCategory, ...new Set(projects.value.map((p) => p.category).filter(Boolean))])
+const stages = computed(() => [defaultCategory, ...new Set(projects.value.map((p) => p.stage).filter(Boolean))])
 
-const labels = computed(() => {
-  const ru = locale.value === 'ru'
-  return {
-    domain: ru ? 'Отрасль' : 'Domain',
-    stage: ru ? 'Статус' : 'Stage',
-    searchLabel: ru ? 'Поиск' : 'Search',
-    search: ru ? 'Поиск по описанию, тегам и названию' : 'Search title, description, tags',
-    reset: ru ? 'Сбросить' : 'Reset',
-    empty: ru ? 'Нет проектов под выбранные фильтры' : 'No projects for the selected filters',
-    results: ru ? 'Найдено' : 'Found',
-  }
-})
+const labels = computed(() => copy.value.filters)
 
 const filtered = computed(() => {
   const q = query.value.trim().toLowerCase()
   return projects.value.filter((p) => {
-    const byCategory = activeCategory.value === 'all' || p.category === activeCategory.value
-    const byStage = activeStage.value === 'all' || p.stage === activeStage.value
+    const byCategory = activeCategory.value === defaultCategory || p.category === activeCategory.value
+    const byStage = activeStage.value === defaultCategory || p.stage === activeStage.value
     const byQuery =
       !q ||
       p.title.toLowerCase().includes(q) ||
@@ -247,7 +54,7 @@ const filtered = computed(() => {
 const resetFilters = () => {
   query.value = ''
   activeCategory.value = defaultCategory
-  activeStage.value = 'all'
+  activeStage.value = defaultCategory
 }
 
 const fallbackImg = (event: Event) => {
@@ -267,7 +74,6 @@ watch(locale, () => resetFilters())
           <h2>{{ copy.title }}</h2>
           <p class="lead">{{ copy.lead }}</p>
         </div>
-      
       </div>
 
       <div class="controls-grid">
@@ -283,7 +89,7 @@ watch(locale, () => resetFilters())
                 :class="{ 'is-active': activeCategory === category }"
                 @click="activeCategory = category"
               >
-                {{ category === 'all' ? (locale === 'ru' ? 'Все' : 'All') : category }}
+                {{ category === defaultCategory ? labels.all : category }}
               </button>
             </div>
           </div>
@@ -301,7 +107,7 @@ watch(locale, () => resetFilters())
                 :class="{ 'is-active': activeStage === stage }"
                 @click="activeStage = stage"
               >
-                {{ stage === 'all' ? (locale === 'ru' ? 'Все' : 'All') : stage }}
+                {{ stage === defaultCategory ? labels.all : stage }}
               </button>
             </div>
           </div>
@@ -314,7 +120,7 @@ watch(locale, () => resetFilters())
               <input
                 v-model="query"
                 type="text"
-                :placeholder="labels.search"
+                :placeholder="labels.searchPlaceholder"
                 class="search-input"
               />
               <button type="button" class="chip ghost" @click="resetFilters">{{ labels.reset }}</button>

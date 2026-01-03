@@ -48,7 +48,17 @@ export const translations: Record<
       eyebrow: string
       title: string
       lead: string
-      cards: { title: string; body: string; meta: string }[]
+      filters: {
+        domain: string
+        stage: string
+        searchLabel: string
+        searchPlaceholder: string
+        reset: string
+        empty: string
+        results: string
+        all: string
+      }
+      cards: { title: string; body: string; meta: string; category?: string; stage?: string; tags?: string[] }[]
     }
     contacts: {
       eyebrow: string
@@ -66,6 +76,10 @@ export const translations: Record<
       alt: string
       mailSubject: string
       mailLabels: { name: string; phone: string; date: string; time: string }
+      submitSuccess: string
+      submitError: string
+      submitErrorFallback: string
+      modalOk: string
     }
     certificates: {
       eyebrow: string
@@ -79,188 +93,206 @@ export const translations: Record<
 > = {
   ru: {
     header: {
-      logoTagline: 'Инженерное бюро',
-      nav: ['Философия', 'Методика', 'Направления', 'Доверие', 'Проекты', 'Контакты'],
-      cta: 'Консультация',
+      logoTagline: 'Инжиниринговое бюро',
+      nav: ['Философия', 'Метод', 'Компетенции', 'Доверие', 'Проекты', 'Контакты'],
+      cta: 'Назначить звонок',
       menuTitle: 'Навигация',
       menuClose: 'Закрыть меню',
       menuOpenLabel: 'Открыть меню',
-      languageLabel: 'Переключить язык',
-      languageShort: { ru: 'РУ', en: 'EN' },
+      languageLabel: 'Сменить язык',
+      languageShort: { ru: 'RU', en: 'EN' },
     },
     hero: {
-      eyebrow: 'ИКБ · контрактная разработка и ОКР',
-      title: 'Проектируем и доводим инженерные продукты до рынка.',
+      eyebrow: 'IKB — контрактное инженерное бюро и R&D',
+      title: 'Проектируем и выводим инженерные продукты на рынок.',
       lead:
-        'Берём на себя полный цикл: постановка задачи, проектирование, механика и электроника, embedded-ПО, испытания и подготовка к предсерии. Работаем с B2B-командами как единый инженерный контур — аккуратно, системно и с измеримыми результатами. NDA подписываем на старте и ведём проект в режиме "одного окна".',
-      ctas: { primary: 'Запланировать встречу', secondary: 'Посмотреть проекты' },
+        'Закрываем весь цикл: формулировка задачи, архитектура продукта, механика и электроника, встроенное ПО, тесты и предпроизводственная подготовка. Работаем как единый инженерный стрим для B2B-команд — аккуратно, системно, с измеримыми результатами. NDA подписываем на входе и ведём проект в формате «единого окна».',
+      ctas: { primary: 'Назначить звонок', secondary: 'Посмотреть проекты' },
       metrics: [
-        { value: '18+ лет', label: 'инженерной практики и производства' },
-        { value: '100+ изделий', label: 'прототипы, MVP и внедрения' },
+        { value: '18+ лет', label: 'инжиниринга и производства' },
+        { value: '100+ изделий', label: 'прототипы, MVP и пилоты' },
         { value: 'NDA', label: 'конфиденциальность по умолчанию' },
       ],
       notes: [
         {
           title: 'Сложные системы под ключ',
           body:
-            'Прецизионная механика, силовая электроника, промышленная автоматика, коммуникации, FPGA/embedded, стенды и валидация. Собираем решение под бизнес-цель: надёжность, себестоимость, технологичность, сроки.',
+            'Точная механика, силовая электроника, промышленная автоматизация, связь, FPGA/embedded, стенды и валидация. Решение подстраиваем под бизнес-задачу: надёжность, себестоимость, производимость, сроки.',
         },
         {
-          title: 'Процесс, который держит сроки',
+          title: 'Процесс, который держит слово',
           body:
-            'Выделенный PM, прозрачные артефакты (спеки, схемы, BOM, протоколы испытаний), контроль рисков на каждом цикле. Готовность к аудиту, аккуратная документация и понятные статусы без магии.',
+            'Персональный PM, прозрачные артефакты (спеки, схемы, BOM, протоколы), учёт рисков на каждом цикле. Документация готова к аудиту, статусы понятны, «чёрных ящиков» нет.',
         },
       ],
     },
     values: {
-      eyebrow: 'Философия ИКБ',
+      eyebrow: 'Философия IKB',
       title:
-        'Инновационность — конфиденциальность — безопасность. Так мы превращаем идеи в серийные изделия: расчётно, аккуратно, с полной документацией.',
+        'Инновация — конфиденциальность — безопасность. Так мы доводим идеи до серийного продукта: расчётливо, аккуратно, с полной документацией.',
       cards: [
         {
-          title: 'Системная инженерия вместо "соберём и посмотрим"',
+          title: 'Системная инженерия вместо угадываний',
           body:
-            'Проектируем через модель: механика, электрические и тепловые режимы, логика управления, отказоустойчивость. Закладываем промышленную практику — интерфейсы и сценарии управления (например, RS-485/DALI, работа по времени/событию/датчикам), устойчивое питание и предсказуемое поведение устройства в реальной эксплуатации.',
+            'Проектируем через модели: механика, электротермальные режимы, логика управления, отказоустойчивость. Вшиваем промышленную практику — интерфейсы и сценарии управления (RS-485/DALI, по времени/событию/датчикам), устойчивое питание и предсказуемость в поле.',
         },
         {
-          title: 'Конфиденциальность и безопасность — по умолчанию',
+          title: 'Конфиденциальность и безопасность по умолчанию',
           body:
-            'NDA — до передачи материалов. Внутри проекта ведём реестры рисков и решений, чтобы не было сюрпризов на финале. Для нас "безопасность" — не лозунг: это контроль нагрузок, температур и режимов работы, продуманная диагностика, сценарии предотвращения аварий и понятные правила доступа.',
+            'NDA ещё до старта. Внутри проекта ведём логи рисков и решений, чтобы не было сюрпризов на финише. Безопасность не лозунг: контроль нагрузок и температур, диагностика, fail-safe, понятные политики доступа.',
         },
         {
-          title: 'Результат в формате производства',
+          title: 'Готовность к производству',
           body:
-            'Передаём полный комплект КД/ЭД: паспорта, инструкции, схемы, спецификации (BOM), прошивки, протоколы испытаний. Сопровождаем пилот и предсерию, помогаем довести изделие до технологичности, стабильной сборки и качества партии — так, чтобы продукт можно было выпускать, обслуживать и масштабировать.',
+            'Передаём полный комплект: паспорта, инструкции, схемы, BOM, прошивки, протоколы испытаний. Поддерживаем пилот и предсерийку, настраиваем технологичность, стабильную сборку и качество партии, чтобы продукт можно было производить, обслуживать и масштабировать.',
         },
       ],
     },
     approach: {
-      eyebrow: 'Методика',
-      title: 'Работаем как интегрированная команда: консалтинг, R&D и вывод в серию в едином контуре.',
-      lead: 'Каждый этап построен так, чтобы экономить время на стыках, держать качество и управлять рисками.',
+      eyebrow: 'Метод',
+      title: 'Работаем как одна команда: консалтинг, R&D и передача в производство.',
+      lead: 'Каждый этап экономит время на стыках, держит качество и управляет рисками.',
       steps: [
         {
-          title: 'Синхронизация и NDA',
-          body:
-            'Подписываем NDA, фиксируем требования, проводим стратегическую сессию, формируем критерии успеха и артефакты запуска.',
+          title: 'Запуск и NDA',
+          body: 'Подписываем NDA, фиксируем требования, проводим стратегическую сессию, определяем критерии успеха и стартовые артефакты.',
         },
         {
-          title: 'Системный концепт',
-          body:
-            'Функционально-стоимостной анализ, выбор технологий, расчёт рисков и сроков, дорожная карта и ресурсная модель проекта.',
+          title: 'Системная концепция',
+          body: 'Анализ функций и стоимости, выбор технологий, оценка рисков и сроков, дорожная карта и модель ресурсов.',
         },
         {
           title: 'Проектирование и прототипы',
-          body:
-            'CAD/CAE, силовая и слаботочная электроника, прошивки, быстрые макеты и 3D-печать, испытания гипотез на стендах.',
+          body: 'CAD/CAE, силовая и слаботочная электроника, прошивки, быстрые стенды и 3D-печать, тестирование гипотез на лабораторных стендах.',
         },
         {
-          title: 'Валидация и серия',
-          body:
-            'Предсерийные образцы, тест-планы, сопровождение сертификации, передача пакета на производство и ввод первой партии.',
+          title: 'Валидация и производство',
+          body: 'Предсерийные образцы, планы испытаний, сопровождение сертификации, передача пакета в производство и запуск первой партии.',
         },
       ],
     },
     competencies: {
-      eyebrow: 'Направления',
-      title: 'Полный спектр инженерных компетенций в одном руководящем центре.',
+      eyebrow: 'Компетенции',
+      title: 'Полный стек инженерных дисциплин в одном центре.',
       cards: [
         {
-          title: 'Мехатроника и точные механизмы',
-          body: 'Прецизионные приводы, кинематика, тепловые и прочностные расчёты, компоновка в ограниченных габаритах.',
+          title: 'Мехатроника и точная механика',
+          body: 'Прецизионные приводы, кинематика, расчёты по теплу и прочности, компоновка в ограниченном габарите.',
         },
         {
           title: 'Электроника и прошивки',
           body:
-            'Высокоплотные платы, силовая часть и сенсорика, RTOS/Embedded Linux, драйверы, защитные алгоритмы и кибербезопасность.',
+            'Плотные платы, питание и датчики, RTOS/Embedded Linux, драйверы, алгоритмы безопасности и киберзащита.',
         },
         {
           title: 'Цифровое моделирование',
-          body: 'CAD/CAE, мультифизика, CFD/FEM, расчёт долговечности и цифровые близнецы для прогнозирования ресурса изделия.',
+          body: 'CAD/CAE, мультифизика, CFD/FEM, расчёт ресурса и цифровые двойники для долговечности продукта.',
         },
         {
           title: 'Сертификация и качество',
           body:
-            'ISO 9001/13485, IEC/EN, подготовка технических файлов, управление рисками, аудит поставщиков и производственных партнёров.',
+            'ISO 9001/13485, IEC/EN, технические файлы, управление рисками, аудиты поставщиков и партнёры по производству.',
         },
       ],
     },
     trust: {
       eyebrow: 'Доверие',
-      title: 'Работаем с лидерами отраслей и бережно храним их тишину.',
-      lead: 'Большинство проектов под NDA. Показываем лишь часть инфраструктуры и подходов к контролю качества.',
+      title: 'Работаем с лидерами индустрий и бережём тишину.',
+      lead: 'Большая часть проектов под NDA. Ниже — как мы обеспечиваем качество и безопасность.',
       cards: [
         {
           title: 'Система качества',
           body:
-            'Собственная система менеджмента качества, процедуры под ISO 9001 и чек-листы для сложных отраслевых стандартов.',
+            'Внутренняя система управления качеством на базе ISO 9001, процедуры и чек-листы под требовательные отрасли.',
         },
         {
           title: 'Готовность к MedTech',
           body:
-            'Работаем по принципам ISO 13485: риск-менеджмент, трассируемость, подготовка технических файлов и протоколов.',
+            'Принципы ISO 13485 в работе: управление рисками, трассировка, подготовка техфайлов и протоколов.',
         },
         {
           title: 'Данные и NDA',
           body:
-            'Закрытые контуры хранения, контроль доступа, шифрование и юридически выверенные NDA до передачи исходных данных.',
+            'Закрытые периметры хранения, контроль доступа, шифрование и жёсткие NDA до любого обмена исходными данными.',
         },
         {
           title: 'Партнёры',
           body:
-            'Сеть сертифицированных поставщиков и лабораторий для испытаний, сертификации и вывода изделия в серию.',
+            'Сеть проверенных поставщиков и лабораторий для испытаний, сертификации и масштабирования продукта до серии.',
         },
       ],
     },
     projects: {
       eyebrow: 'Проекты',
-      title: 'Направления, в которых мы сильны и которые выводим на рынок.',
-      lead: 'Часть портфеля закрыта NDA. Ниже — примеры архитектур и форматов сопровождения.',
+      title: 'Доменная экспертиза и работающие внедрения.',
+      lead: 'Часть портфеля под NDA. Ниже примеры архитектур и форматов сотрудничества.',
+      filters: {
+        domain: 'Домен',
+        stage: 'Этап',
+        searchLabel: 'Поиск',
+        searchPlaceholder: 'Поиск по названию, описанию или тегам',
+        reset: 'Сбросить',
+        empty: 'Нет проектов под выбранные фильтры',
+        results: 'Найдено',
+        all: 'Все',
+      },
       cards: [
         {
           title: 'Роботизированная линия контроля качества',
           body:
-            'Система высокоточной механики, машинного зрения и силовой электроники для непрерывной проверки изделий без остановки линии.',
-          meta: 'Автопром / 8 месяцев от концепта до пилота',
+            'Высокоточная механика, машинное зрение и силовая электроника для непрерывной инспекции изделий без остановки линии.',
+          meta: 'Автоиндустрия / 8 месяцев от концепции до пилота',
+          category: 'Автопром',
+          stage: 'Пилот',
+          tags: ['машинное зрение', 'механика', 'силовая электроника'],
         },
         {
-          title: 'Медицинский модуль визуализации',
+          title: 'Модуль медицинской визуализации',
           body:
-            'Проектирование электроники, оптомеханики и прошивки, подготовка технических файлов, сопровождение лабораторных испытаний.',
+            'Электроника, оптомеханика и прошивки, подготовка технических файлов и сопровождение лабораторных испытаний.',
           meta: 'MedTech / предсерийная партия',
+          category: 'Медтех',
+          stage: 'Предсерия',
+          tags: ['оптомеханика', 'безопасность', 'прошивка'],
         },
         {
-          title: 'Индустриальный IoT-контроллер',
+          title: 'Промышленный IoT-контроллер',
           body:
-            'EMI/EMC-устойчивость, силовая часть, драйверы датчиков, защищённые протоколы, цифровой двойник для тестирования в поле.',
+            'Устойчивость EMI/EMC, силовой каскад, драйверы датчиков, защищённые протоколы и цифровой двойник для полевых тестов.',
           meta: 'Промышленность / 60 000+ устройств в эксплуатации',
+          category: 'Промышленный интернет вещей',
+          stage: 'Серия',
+          tags: ['интернет вещей', 'ЭМС', 'протоколы'],
         },
       ],
     },
     contacts: {
       eyebrow: 'Контакты',
       title: 'Назначим звонок в течение 48 часов.',
-      lead:
-        'Заполните форму или напишите нам. NDA подписываем сразу, поэтому можно прислать контекст и материалы.',
-      formTitle: 'Запланировать консультацию',
+      lead: 'Заполните форму или напишите нам. NDA подписываем на входе, так что можно безопасно делиться материалами.',
+      formTitle: 'Записаться на консультацию',
       fields: {
-        name: { label: 'Имя', placeholder: 'Как к вам обращаться' },
+        name: { label: 'Имя', placeholder: 'Как к вам обращаться?' },
         phone: { label: 'Телефон', placeholder: '+7 (___) ___-__-__' },
-        date: { label: 'Дата', placeholder: '' },
-        time: { label: 'Время', placeholder: '' },
+        date: { label: 'Дата', placeholder: 'Выберите дату' },
+        time: { label: 'Время', placeholder: 'Укажите время' },
       },
-      note: 'Бережно храним данные и используем их только для связи по вашему запросу.',
+      note: 'Мы защищаем ваши данные и используем их только для ответа на запрос.',
       button: 'Отправить заявку',
-      alt: 'Или напишите:',
-      mailSubject: 'Заявка на консультацию IKB',
+      alt: 'Или на почту:',
+      mailSubject: 'Заявка на консультацию — IKB',
       mailLabels: { name: 'Имя', phone: 'Телефон', date: 'Дата', time: 'Время' },
+      submitSuccess: 'Заявка отправлена. Ответим в течение 48 часов.',
+      submitError: 'Не удалось отправить.',
+      submitErrorFallback: 'Попробуйте ещё раз или напишите на почту.',
+      modalOk: 'ОК',
     },
     certificates: {
-      eyebrow: 'Сертификаты',
-      title: 'Подтверждённая экспертиза',
-      lead: 'Отзывы, дипломы и сертификаты, подтверждающие нашу работу.',
+      eyebrow: 'Аккредитации',
+      title: 'Сертификаты и награды',
+      lead: 'Отзывы, дипломы и подтверждения квалификации.',
       items: [
-        { id: 'cerc1', src: '/certificates/cerc1.JPG', title: 'Рекомендательное письмо', subtitle: 'AstraZeneca, Россия', type: 'review' },
+        { id: 'cerc1', src: '/certificates/cerc1.JPG', title: 'Рекомендательное письмо', subtitle: 'AstraZeneca / RU', type: 'review' },
         { id: 'cerc2', src: '/certificates/cerc2.JPG', title: 'Диплом', subtitle: 'SPS/IPC/DRIVES-2012 (Германия)', type: 'diploma' },
         { id: 'cerc3', src: '/certificates/cerc3.jpg', title: 'Диплом', subtitle: 'INTHUB 2022 — бронзовая медаль', type: 'diploma' },
         { id: 'cerc4', src: '/certificates/cerc4.JPG', title: 'Сертификат', subtitle: 'Сертификат соответствия (ГОСТ Р)', type: 'certificate' },
@@ -281,10 +313,10 @@ export const translations: Record<
       languageShort: { ru: 'RU', en: 'EN' },
     },
     hero: {
-      eyebrow: 'IKB · contract engineering & R&D',
+      eyebrow: 'IKB — contract engineering & R&D',
       title: 'We design and ship engineered products to market.',
       lead:
-        'We cover the full cycle: problem framing, product architecture, mechanics and electronics, embedded software, testing, and pre-production prep. We work as a single engineering lane for B2B teams—careful, system-driven, with measurable outcomes. NDA is signed upfront and we operate in a "single window" format.',
+        'We cover the full cycle: problem framing, product architecture, mechanics and electronics, embedded software, testing, and pre-production prep. We work as a single engineering lane for B2B teams — careful, system-driven, with measurable outcomes. NDA is signed upfront and we operate in a single-window format.',
       ctas: { primary: 'Schedule a call', secondary: 'View projects' },
       metrics: [
         { value: '18+ years', label: 'of engineering practice and manufacturing' },
@@ -312,7 +344,7 @@ export const translations: Record<
         {
           title: 'Systems engineering over guesswork',
           body:
-            'We design through models: mechanics, electrical and thermal modes, control logic, fault tolerance. We embed industrial practice—interfaces and control scenarios (e.g. RS-485/DALI, time/event/sensor driven), stable power and predictable behaviour in the field.',
+            'We design through models: mechanics, electrical and thermal modes, control logic, fault tolerance. We embed industrial practice — interfaces and control scenarios (e.g. RS-485/DALI, time/event/sensor driven), stable power and predictable behaviour in the field.',
         },
         {
           title: 'Confidentiality and safety by default',
@@ -404,24 +436,43 @@ export const translations: Record<
       eyebrow: 'Projects',
       title: 'Domains where we are strong and ship to market.',
       lead: 'Part of the portfolio is under NDA. Below are example architectures and engagement formats.',
+      filters: {
+        domain: 'Domain',
+        stage: 'Stage',
+        searchLabel: 'Search',
+        searchPlaceholder: 'Search title, description or tags',
+        reset: 'Reset',
+        empty: 'No projects for the selected filters',
+        results: 'Found',
+        all: 'All',
+      },
       cards: [
         {
           title: 'Robotic quality inspection line',
           body:
             'High-precision mechanics, machine vision, and power electronics for continuous product inspection without stopping the line.',
           meta: 'Automotive / 8 months from concept to pilot',
+          category: 'Automotive',
+          stage: 'Pilot',
+          tags: ['vision', 'motion', 'power'],
         },
         {
           title: 'Medical imaging module',
           body:
             'Electronics, optomechanics, and firmware design, technical files preparation, and lab test support.',
           meta: 'MedTech / pre-series batch',
+          category: 'MedTech',
+          stage: 'Pre-series',
+          tags: ['opto', 'safety', 'firmware'],
         },
         {
           title: 'Industrial IoT controller',
           body:
             'EMI/EMC robustness, power stage, sensor drivers, secured protocols, and a digital twin for field testing.',
           meta: 'Industry / 60 000+ devices in operation',
+          category: 'IoT',
+          stage: 'Series',
+          tags: ['iot', 'emc', 'protocols'],
         },
       ],
     },
@@ -433,14 +484,18 @@ export const translations: Record<
       fields: {
         name: { label: 'Name', placeholder: 'How should we address you?' },
         phone: { label: 'Phone', placeholder: '+1 (___) ___-__-__' },
-        date: { label: 'Date', placeholder: '' },
-        time: { label: 'Time', placeholder: '' },
+        date: { label: 'Date', placeholder: 'Pick a date' },
+        time: { label: 'Time', placeholder: 'Pick a time' },
       },
       note: 'We keep your data safe and use it only to respond to your request.',
       button: 'Send request',
       alt: 'Or email:',
-      mailSubject: 'Consultation request · IKB',
+      mailSubject: 'Consultation request — IKB',
       mailLabels: { name: 'Name', phone: 'Phone', date: 'Date', time: 'Time' },
+      submitSuccess: 'Request sent. We will respond within 48 hours.',
+      submitError: 'Could not send.',
+      submitErrorFallback: 'Please try again or drop us an email.',
+      modalOk: 'OK',
     },
     certificates: {
       eyebrow: 'Credentials',

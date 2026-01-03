@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import CertificateItem, ContentBlock, ProjectItem
+from .models import CertificateItem, ContactRequest, ContentBlock, ProjectItem
 
 
 class MediaUrlMixin:
@@ -72,3 +72,34 @@ class CertificateItemSerializer(MediaUrlMixin, serializers.ModelSerializer):
     def get_image_url(self, obj):
         request = self.context.get("request")
         return self.build_media_url(request, obj.image)
+
+
+class ContactRequestSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ContactRequest
+        fields = [
+            "id",
+            "name",
+            "phone",
+            "preferred_date",
+            "preferred_time",
+            "message",
+            "locale",
+            "extra",
+            "created_at",
+        ]
+        read_only_fields = ["id", "created_at"]
+
+    def validate_phone(self, value):
+        return value.strip()
+
+    def create(self, validated_data):
+        request = self.context.get("request")
+        extra = validated_data.get("extra") or {}
+        if request:
+            extra.setdefault("user_agent", request.META.get("HTTP_USER_AGENT"))
+            extra.setdefault("referer", request.META.get("HTTP_REFERER"))
+            extra.setdefault("client_ip", request.META.get("REMOTE_ADDR"))
+            extra.setdefault("path", request.path)
+        validated_data["extra"] = extra
+        return super().create(validated_data)

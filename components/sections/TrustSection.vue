@@ -18,8 +18,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 
-const { t } = useLocale()
-const copy = computed(() => t.value.trust)
+type TrustCopy = (typeof import('~/content/translations').translations)['ru']['trust']
+
+const { t } = useContent()
+const copy = computed<TrustCopy>(() => t('trust') as TrustCopy)
 </script>

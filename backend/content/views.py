@@ -1,13 +1,13 @@
 from typing import Dict
 
-from rest_framework import viewsets
+from rest_framework import mixins, viewsets
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CertificateItem, ContentBlock, ProjectItem
-from .serializers import CertificateItemSerializer, ContentBlockSerializer, ProjectItemSerializer
+from .models import CertificateItem, ContactRequest, ContentBlock, ProjectItem
+from .serializers import CertificateItemSerializer, ContactRequestSerializer, ContentBlockSerializer, ProjectItemSerializer
 from .services import collect_sections
 
 
@@ -51,6 +51,15 @@ class CertificateItemViewSet(viewsets.ModelViewSet):
         if not self.request.user.is_authenticated:
             qs = qs.filter(is_active=True)
         return qs.order_by("order", "id")
+
+
+class ContactRequestViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    queryset = ContactRequest.objects.all()
+    serializer_class = ContactRequestSerializer
+    parser_classes = [JSONParser, FormParser]
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    http_method_names = ["post", "head", "options"]
 
 
 class HomePublicView(APIView):

@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import CertificateItem, ContentBlock, ProjectItem
+from .models import CertificateItem, ContactRequest, ContentBlock, ProjectItem
 
 
 @admin.register(ContentBlock)
@@ -27,3 +27,12 @@ class CertificateItemAdmin(admin.ModelAdmin):
     search_fields = ("title", "subtitle")
     readonly_fields = ("created_at", "updated_at")
     ordering = ("order", "id")
+
+
+@admin.register(ContactRequest)
+class ContactRequestAdmin(admin.ModelAdmin):
+    list_display = ("name", "phone", "preferred_date", "preferred_time", "locale", "created_at")
+    list_filter = ("locale",)
+    search_fields = ("name", "phone", "message")
+    readonly_fields = ("created_at",)
+    ordering = ("-created_at",)

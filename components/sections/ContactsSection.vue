@@ -77,18 +77,41 @@
           <p class="contact-alt">
             {{ copy.alt }} <a href="mailto:hello@ikb.studio">hello@ikb.studio</a>
           </p>
+          <p v-if="status === 'success'" class="contact-status success">
+            {{ copy.submitSuccess }}
+          </p>
+          <p v-else-if="status === 'error'" class="contact-status error">
+            {{ errorText }}
+          </p>
         </form>
+      </div>
+    </div>
+
+    <div v-if="showModal" class="modal-backdrop" @click="showModal = false">
+      <div class="modal" @click.stop>
+        <div class="modal-icon" :class="modalType">
+          <span v-if="modalType === 'success'">✓</span>
+          <span v-else>!</span>
+        </div>
+        <p class="modal-title">
+          {{ modalType === 'success' ? copy.submitSuccess : copy.submitError }}
+        </p>
+        <p class="modal-body">{{ modalBody }}</p>
+        <button class="btn btn-primary" type="button" @click="showModal = false">{{ copy.modalOk }}</button>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { reactive, computed, ref } from 'vue'
+import { useContent } from '~/composables/useContent'
+import { useApiFetch } from '~/composables/useApi'
 
-const { t } = useLocale()
-const copy = computed(() => t.value.contacts)
+type ContactsCopy = (typeof import('~/content/translations').translations)['ru']['contacts']
+
+const { copy: content, t } = useContent()
+const copy = computed<ContactsCopy>(() => (content.value.contacts || t('contacts')) as ContactsCopy)
 
 const form = reactive({
   name: '',
@@ -97,22 +120,51 @@ const form = reactive({
   time: '',
 })
 
-const isDisabled = computed(() => {
-  return !form.name || !form.phone || !form.date || !form.time
+const status = ref<'idle' | 'loading' | 'success' | 'error'>('idle')
+const errorMsg = ref('')
+const showModal = ref(false)
+const modalType = ref<'success' | 'error'>('success')
+const errorText = computed(() => {
+  const details = errorMsg.value?.trim()
+  if (details) return `${copy.value.submitError} ${details}`
+  return copy.value.submitErrorFallback || copy.value.submitError
+})
+const modalBody = computed(() => {
+  if (modalType.value === 'success') return copy.value.submitSuccess
+  return errorText.value
 })
 
-function submit() {
-  const subject = encodeURIComponent(copy.value.mailSubject)
-  const body = encodeURIComponent(
-    [
-      `${copy.value.mailLabels.name}: ${form.name}`,
-      `${copy.value.mailLabels.phone}: ${form.phone}`,
-      `${copy.value.mailLabels.date}: ${form.date}`,
-      `${copy.value.mailLabels.time}: ${form.time}`,
-    ].join('\n')
-  )
+const isDisabled = computed(() => {
+  return status.value === 'loading' || !form.name || !form.phone || !form.date || !form.time
+})
 
-  window.location.href = `mailto:hello@ikb.studio?subject=${subject}&body=${body}`
+async function submit() {
+  status.value = 'loading'
+  errorMsg.value = ''
+  try {
+    await useApiFetch('/api/applications/', {
+      method: 'POST',
+      body: {
+        name: form.name,
+        phone: form.phone,
+        preferred_date: form.date || null,
+        preferred_time: form.time || null,
+        message: '',
+      },
+    })
+    status.value = 'success'
+    modalType.value = 'success'
+    showModal.value = true
+    form.name = ''
+    form.phone = ''
+    form.date = ''
+    form.time = ''
+  } catch (error: any) {
+    status.value = 'error'
+    modalType.value = 'error'
+    errorMsg.value = error?.message || ''
+    showModal.value = true
+  }
 }
 </script>
 
@@ -201,6 +253,79 @@ a {
   margin: 6px 0 0;
   font-size: 13px;
   opacity: 0.75;
+}
+
+.contact-status {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.contact-status.success {
+  color: #6ad597;
+}
+
+.contact-status.error {
+  color: #ff7b7b;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 16, 26, 0.38);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  z-index: 20;
+  padding: 16px;
+}
+
+.modal {
+  width: min(480px, 100%);
+  background: radial-gradient(circle at 18% 18%, rgba(var(--accent-rgb), 0.14), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.82));
+  border: 1px solid rgba(var(--accent-rgb), 0.26);
+  border-radius: 18px;
+  padding: 22px 22px 20px;
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.28);
+  display: grid;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.modal-body {
+  font-size: 14px;
+  opacity: 0.85;
+  margin: 0;
+}
+
+.modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0b0f1a;
+  margin: 0 auto;
+}
+
+.modal-icon.success {
+  background: rgba(var(--accent-rgb), 0.25);
+}
+
+.modal-icon.error {
+  background: #ffadad;
 }
 
 @media (max-width: 720px) {

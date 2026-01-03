@@ -33,10 +33,12 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 
-const { t } = useLocale()
-const copy = computed(() => t.value.hero)
+type HeroCopy = (typeof import('~/content/translations').translations)['ru']['hero']
+
+const { t } = useContent()
+const copy = computed<HeroCopy>(() => t('hero') as HeroCopy)
 
 const isHeroVisible = ref(false)
 

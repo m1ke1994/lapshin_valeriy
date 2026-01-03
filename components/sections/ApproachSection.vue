@@ -19,8 +19,10 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useLocale } from '~/composables/useLocale'
+import { useContent } from '~/composables/useContent'
 
-const { t } = useLocale()
-const copy = computed(() => t.value.approach)
+type ApproachCopy = (typeof import('~/content/translations').translations)['ru']['approach']
+
+const { t } = useContent()
+const copy = computed<ApproachCopy>(() => t('approach') as ApproachCopy)
 </script>
