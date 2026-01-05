@@ -268,7 +268,8 @@ a {
 .loyalty-widget {
   position: fixed;
   right: 26px;
-  bottom: 26px;
+  top: 50%;
+  transform: translateY(-50%);
   width: min(360px, 88vw);
   padding: 16px;
   border-radius: 18px;
@@ -291,7 +292,9 @@ a {
 
   .loyalty-widget {
     right: 14px;
+    top: auto;
     bottom: 14px;
+    transform: none;
     width: min(420px, 94vw);
     padding: 14px;
   }
