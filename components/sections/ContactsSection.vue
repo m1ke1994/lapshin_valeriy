@@ -77,10 +77,6 @@
           <p class="contact-alt">
             {{ copy.alt }} <a href="mailto:hello@ikb.studio">hello@ikb.studio</a>
           </p>
-
-          <div class="loyalty-widget">
-            <div id="loyalty-entry" class="loyalty-entry-slot" aria-live="polite"></div>
-          </div>
         </form>
       </div>
     </div>
@@ -88,7 +84,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, computed, onMounted } from 'vue'
+import { reactive, computed } from 'vue'
 import { useLocale } from '~/composables/useLocale'
 import { useHighlight } from '~/composables/useHighlight'
 
@@ -107,55 +103,6 @@ const isDisabled = computed(() => {
   return !form.name || !form.phone || !form.date || !form.time
 })
 
-declare global {
-  interface Window {
-    LoyaltyEntryWidget?: {
-      mount: (selector: string, options: { tenantSlug: string; pwaUrl: string }) => void
-    }
-  }
-}
-
-const widgetSelector = '#loyalty-entry'
-const widgetOptions = {
-  tenantSlug: 'demo',
-  pwaUrl: 'http://localhost:8080/pwa?t=demo',
-}
-
-const mountWidget = () => {
-  const mountFn = window.LoyaltyEntryWidget?.mount
-  if (typeof mountFn !== 'function') return
-  mountFn(widgetSelector, widgetOptions)
-}
-
-const onWidgetScriptLoad = () => {
-  const scriptEl = document.querySelector<HTMLScriptElement>('script[data-loyalty-widget-entry]')
-  if (scriptEl) {
-    scriptEl.dataset.loaded = 'true'
-  }
-  mountWidget()
-}
-
-const ensureWidgetScript = () => {
-  if (typeof window === 'undefined') return
-
-  const existingScript = document.querySelector<HTMLScriptElement>('script[data-loyalty-widget-entry]')
-  if (existingScript) {
-    if (window.LoyaltyEntryWidget?.mount) {
-      mountWidget()
-    } else {
-      existingScript.addEventListener('load', onWidgetScriptLoad, { once: true })
-    }
-    return
-  }
-
-  const script = document.createElement('script')
-  script.src = 'http://localhost:8080/widget/entry-widget.js'
-  script.async = true
-  script.dataset.loyaltyWidgetEntry = 'true'
-  script.addEventListener('load', onWidgetScriptLoad, { once: true })
-  document.head.appendChild(script)
-}
-
 function submit() {
   const subject = encodeURIComponent(copy.value.mailSubject)
   const body = encodeURIComponent(
@@ -169,10 +116,6 @@ function submit() {
 
   window.location.href = `mailto:hello@ikb.studio?subject=${subject}&body=${body}`
 }
-
-onMounted(() => {
-  ensureWidgetScript()
-})
 </script>
 
 <style scoped>
@@ -265,38 +208,9 @@ a {
   opacity: 0.75;
 }
 
-.loyalty-widget {
-  position: fixed;
-  right: 26px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: min(360px, 88vw);
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px solid rgba(var(--accent-rgb), 0.28);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9));
-  box-shadow:
-    0 18px 48px rgba(15, 18, 26, 0.24),
-    0 6px 18px rgba(15, 18, 26, 0.12);
-  z-index: 40;
-}
-
-.loyalty-entry-slot {
-  min-height: 220px;
-}
-
 @media (max-width: 720px) {
   .row-2 {
     grid-template-columns: 1fr;
-  }
-
-  .loyalty-widget {
-    right: 14px;
-    top: auto;
-    bottom: 14px;
-    transform: none;
-    width: min(420px, 94vw);
-    padding: 14px;
   }
 }
 </style>
