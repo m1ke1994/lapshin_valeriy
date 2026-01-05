@@ -266,21 +266,34 @@ a {
 }
 
 .loyalty-widget {
-  margin-top: 16px;
+  position: fixed;
+  right: 26px;
+  bottom: 26px;
+  width: min(360px, 88vw);
   padding: 16px;
-  border-radius: 16px;
-  border: 1px dashed rgba(var(--accent-rgb), 0.55);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-radius: 18px;
+  border: 1px solid rgba(var(--accent-rgb), 0.28);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9));
+  box-shadow:
+    0 18px 48px rgba(15, 18, 26, 0.24),
+    0 6px 18px rgba(15, 18, 26, 0.12);
+  z-index: 40;
 }
 
 .loyalty-entry-slot {
-  min-height: 240px;
+  min-height: 220px;
 }
 
 @media (max-width: 720px) {
   .row-2 {
     grid-template-columns: 1fr;
+  }
+
+  .loyalty-widget {
+    right: 14px;
+    bottom: 14px;
+    width: min(420px, 94vw);
+    padding: 14px;
   }
 }
 </style>
